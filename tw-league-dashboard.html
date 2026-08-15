@@ -1,0 +1,768 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>League Dashboard — Full History</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --field: #0a1420; --field-light: #101f30; --card: #0d1826; --line: #1e3a52;
+    --chalk: #e8f0f5; --chalk-dim: #9fb5c4; --hash: #5c7a8f;
+    --gold: #4fc3d9; --gold-dim: #3a94a6; --win: #4f9a63; --loss: #c9556f;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:radial-gradient(1100px 500px at 15% -5%, #132844 0%, transparent 60%), var(--field);
+    color:var(--chalk);font-family:'Inter',sans-serif;padding:32px 20px 80px;}
+  .wrap{max-width:1100px;margin:0 auto;}
+  .hero{position:relative;padding:36px 32px 30px;border:1px solid var(--line);border-radius:4px;
+    background:repeating-linear-gradient(90deg, rgba(255,255,255,0.03) 0 1px, transparent 1px 78px), linear-gradient(180deg, var(--field-light) 0%, var(--field) 100%);
+    overflow:hidden;margin-bottom:24px;}
+  .hero::before{content:"";position:absolute;inset:0;background:linear-gradient(90deg, transparent 49.4%, rgba(79,195,217,0.14) 49.4% 50.6%, transparent 50.6%);pointer-events:none;}
+  .eyebrow{font-family:'Space Mono',monospace;font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--gold);margin:0 0 10px;}
+  .hero h1{font-family:'Oswald',sans-serif;font-weight:700;font-size:clamp(28px,5vw,42px);letter-spacing:.01em;text-transform:uppercase;margin:0 0 6px;line-height:1.02;}
+  .hero p{margin:0;color:var(--chalk-dim);font-size:14.5px;max-width:620px;}
+
+  .season-tabs{display:flex;gap:8px;margin-bottom:16px;}
+  .season-tab{flex:1;text-align:center;padding:14px;font-family:'Oswald',sans-serif;font-weight:700;font-size:16px;
+    letter-spacing:.04em;border:1px solid var(--line);border-radius:4px;cursor:pointer;color:var(--chalk-dim);background:var(--card);transition:all .15s;}
+  .season-tab.active{color:var(--field);background:var(--gold);border-color:var(--gold);}
+  .season-tab .yr{display:block;font-size:11px;font-family:'Space Mono',monospace;opacity:.8;margin-top:2px;}
+
+  .tabs{display:flex;gap:2px;margin-bottom:20px;border:1px solid var(--line);border-radius:4px;overflow:hidden;background:var(--card);flex-wrap:wrap;}
+  .tab{flex:1;min-width:110px;text-align:center;padding:12px 8px;font-family:'Oswald',sans-serif;font-weight:600;font-size:12px;
+    text-transform:uppercase;letter-spacing:.05em;color:var(--chalk-dim);cursor:pointer;user-select:none;border-right:1px solid var(--line);transition:background .15s,color .15s;}
+  .tab:last-child{border-right:none;}
+  .tab:hover{color:var(--chalk);background:rgba(79,195,217,0.08);}
+  .tab.active{color:var(--field);background:var(--gold);}
+  .panel{display:none;} .panel.active{display:block;animation:fade .25s ease;}
+  @keyframes fade{from{opacity:0;transform:translateY(4px);} to{opacity:1;transform:none;}}
+  .season-block{display:none;} .season-block.active{display:block;}
+
+  .card{background:var(--card);border:1px solid var(--line);border-radius:4px;padding:22px;margin-bottom:18px;}
+  .card h2{font-family:'Oswald',sans-serif;text-transform:uppercase;font-size:15px;letter-spacing:.06em;margin:0 0 4px;display:flex;align-items:center;gap:9px;}
+  .card h2 .num{font-family:'Space Mono',monospace;font-size:11px;color:var(--gold-dim);}
+  .card .sub{color:var(--hash);font-size:12.5px;margin:0 0 16px;}
+
+  .filter-bar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;padding:12px;background:var(--field-light);border:1px solid var(--line);border-radius:4px;align-items:flex-end;}
+  .filter-group{display:flex;flex-direction:column;gap:4px;}
+  .filter-group label{font-family:'Space Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--hash);}
+  .filter-group select, .filter-group input{
+    background:var(--field);border:1px solid var(--line);color:var(--chalk);border-radius:3px;
+    padding:7px 10px;font-family:'Inter',sans-serif;font-size:12.5px;min-width:140px;}
+  .filter-group select:focus, .filter-group input:focus{outline:1px solid var(--gold-dim);}
+  .filter-clear{background:none;border:1px solid var(--line);color:var(--hash);border-radius:3px;
+    padding:7px 12px;font-size:11.5px;cursor:pointer;font-family:'Space Mono',monospace;}
+  .filter-clear:hover{color:var(--chalk);border-color:var(--gold-dim);}
+  .filter-count{font-size:11px;color:var(--hash);margin-bottom:10px;font-family:'Space Mono',monospace;}
+
+  .pos-pills{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;}
+  .pos-pill{padding:6px 14px;border:1px solid var(--line);border-radius:20px;font-family:'Space Mono',monospace;font-size:11.5px;
+    cursor:pointer;color:var(--chalk-dim);background:var(--field-light);transition:all .12s;}
+  .pos-pill:hover{color:var(--chalk);}
+  .pos-pill.active{background:var(--gold);color:var(--field);border-color:var(--gold);font-weight:700;}
+
+  table{width:100%;border-collapse:collapse;font-size:13.5px;}
+  th{text-align:left;font-family:'Oswald',sans-serif;font-weight:500;font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--hash);padding:0 10px 10px;border-bottom:1px solid var(--line);}
+  th.num, td.num{text-align:right;font-family:'Space Mono',monospace;}
+  td{padding:10px 10px;border-bottom:1px solid rgba(255,255,255,0.045);}
+  tr:last-child td{border-bottom:none;}
+  tr.hidden-row{display:none;}
+  .rank{font-family:'Space Mono',monospace;color:var(--hash);width:22px;display:inline-block;}
+  .champ .rank{color:var(--gold);}
+  .team-name{font-weight:600;} .team-mgr{color:var(--hash);font-size:11.5px;display:block;margin-top:1px;}
+  .trophy{color:var(--gold);margin-right:3px;}
+  .wl{font-family:'Space Mono',monospace;} .wl b{color:var(--win);} .wl i{color:var(--loss);font-style:normal;}
+  .badge{display:inline-block;font-family:'Space Mono',monospace;font-size:10.5px;padding:2px 7px;border-radius:20px;border:1px solid var(--line);color:var(--chalk-dim);}
+  .badge.gold{border-color:var(--gold-dim);color:var(--gold);}
+  .badge.year{border-color:var(--gold-dim);color:var(--gold-dim);}
+  .pos-badge{display:inline-block;font-family:'Space Mono',monospace;font-size:10px;padding:1px 6px;border-radius:3px;background:var(--field-light);color:var(--gold-dim);border:1px solid var(--line);}
+
+  .record-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;}
+  @media (max-width:680px){.record-grid{grid-template-columns:1fr;} .season-tab{font-size:13px;} .filter-group select,.filter-group input{min-width:110px;}}
+  .record{border:1px solid var(--line);border-radius:4px;padding:16px;background:linear-gradient(180deg, rgba(79,195,217,0.05), transparent 40%);}
+  .record .label{font-size:10.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--hash);margin-bottom:8px;}
+  .record .value{font-family:'Oswald',sans-serif;font-size:26px;color:var(--gold);line-height:1;}
+  .record .who{margin-top:8px;font-size:13px;font-weight:600;}
+  .record .vs{color:var(--loss);font-weight:400;}
+  .record .ctx{color:var(--hash);font-size:11.5px;margin-top:2px;}
+
+  .pos-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;margin-top:6px;}
+  .pos-card{border:1px solid var(--line);border-radius:4px;padding:12px;background:var(--field-light);}
+  .pos-card .lbl{font-family:'Space Mono',monospace;font-size:10px;color:var(--gold-dim);text-transform:uppercase;}
+  .pos-card .pts{font-family:'Oswald',sans-serif;font-size:22px;color:var(--gold);margin-top:2px;}
+  .pos-card .nm{font-size:12.5px;font-weight:600;margin-top:4px;}
+  .pos-card .tm{font-size:11px;color:var(--hash);margin-top:2px;}
+
+  .bar-row{display:flex;align-items:center;gap:10px;padding:8px 0;}
+  .bar-row .lbl{width:150px;font-size:12.5px;flex-shrink:0;}
+  .bar-track{flex:1;height:8px;background:var(--field-light);border-radius:4px;overflow:hidden;}
+  .bar-fill{height:100%;background:linear-gradient(90deg, var(--gold-dim), var(--gold));}
+  .bar-fill.pa{background:linear-gradient(90deg, #6b3830, var(--loss));}
+  .bar-val{width:60px;text-align:right;font-family:'Space Mono',monospace;font-size:12px;color:var(--chalk-dim);}
+
+  .note{margin-top:18px;padding:14px 16px;border:1px dashed var(--line);border-radius:4px;font-size:12.5px;color:var(--hash);line-height:1.5;}
+  .note b{color:var(--chalk-dim);}
+  footer{text-align:center;color:var(--hash);font-size:11px;margin-top:34px;font-family:'Space Mono',monospace;letter-spacing:.04em;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="hero">
+    <p class="eyebrow">ESPN Fantasy Football · Private League · Full Box Score History</p>
+    <h1>League Dashboard</h1>
+    <p>Every week, every starter, every bench player — filterable by team, position, or player, plus an all-time view across both seasons.</p>
+  </div>
+
+  <div class="season-tabs">
+    <div class="season-tab active" data-season="s2025">2025<span class="yr">8 teams · champion: Drake Dynasty</span></div>
+    <div class="season-tab" data-season="s2024">2024<span class="yr">10 teams · champion: Tucker Punch</span></div>
+    <div class="season-tab" data-season="salltime">All Time<span class="yr">2024–2025 combined</span></div>
+  </div>
+
+  <div class="tabs" id="mainTabs">
+    <div class="tab active" data-tab="standings">Standings</div>
+    <div class="tab" data-tab="teamrecords">Team Records</div>
+    <div class="tab" data-tab="playerrecords">Player Records</div>
+    <div class="tab" data-tab="scores">Weekly Scores</div>
+  </div>
+
+  <div class="season-block active" id="s2025">
+    <div class="panel active" data-panel="standings">
+      <div class="card">
+        <h2>Final Standings <span class="num">2025</span></h2>
+        <p class="sub">8 teams · ranked by final playoff result. Points For and Against are full-season totals.</p>
+        <table><thead><tr><th>#</th><th>Team</th><th class="num">Record</th><th class="num">Win %</th><th class="num">Pts For</th><th class="num">Pts Against</th><th class="num">Diff</th><th class="num">Seed</th></tr></thead>
+        <tbody id="standings2025"></tbody></table>
+      </div>
+    </div>
+    <div class="panel" data-panel="teamrecords">
+      <div class="card">
+        <h2>Team Record Highlights <span class="num">2025</span></h2>
+        <div class="record-grid" id="teamRecords2025"></div>
+      </div>
+      <div class="card">
+        <h2>Points For <span class="num">Season Total</span></h2>
+        <div id="pointsBars2025"></div>
+      </div>
+      <div class="card">
+        <h2>Points Against <span class="num">Season Total</span></h2>
+        <p class="sub">Lower is better — how much a team's opponents scored on them across the season.</p>
+        <div id="paBars2025"></div>
+      </div>
+    </div>
+    <div class="panel" data-panel="playerrecords">
+      <div class="card">
+        <h2>Individual Performances <span class="num">Top 50</span></h2>
+        <p class="sub">Every player-week from 2025, filterable by team, position, or name.</p>
+        <div class="filter-bar">
+          <div class="filter-group"><label>Team</label><select id="perfTeamFilter2025"><option value="">All teams</option></select></div>
+          <div class="filter-group"><label>Position</label><select id="perfPosFilter2025"><option value="">All positions</option></select></div>
+          <div class="filter-group"><label>Player search</label><input type="text" id="perfSearchFilter2025" placeholder="e.g. Gibbs"></div>
+          <button class="filter-clear" onclick="clearFilters('2025','perf')">Clear</button>
+        </div>
+        <div class="filter-count" id="perfCount2025"></div>
+        <table><thead><tr><th>#</th><th>Player</th><th>Pos</th><th>Team</th><th class="num">Week</th><th class="num">Pts</th></tr></thead>
+        <tbody id="topPerf2025"></tbody></table>
+      </div>
+      <div class="card">
+        <h2>Top 10 by Position</h2>
+        <p class="sub">Click a position to see its top 10 single-week performances of the season.</p>
+        <div class="pos-pills" id="posPills2025"></div>
+        <table><thead><tr><th>#</th><th>Player</th><th>Team</th><th class="num">Week</th><th class="num">Pts</th></tr></thead>
+        <tbody id="posTop10_2025"></tbody></table>
+      </div>
+      <div class="card">
+        <h2>Season Point Leaders <span class="num">Top 30</span></h2>
+        <p class="sub">Starters only, filterable by team or position.</p>
+        <div class="filter-bar">
+          <div class="filter-group"><label>Team</label><select id="szTeamFilter2025"><option value="">All teams</option></select></div>
+          <div class="filter-group"><label>Position</label><select id="szPosFilter2025"><option value="">All positions</option></select></div>
+          <button class="filter-clear" onclick="clearFilters('2025','sz')">Clear</button>
+        </div>
+        <table><thead><tr><th>#</th><th>Player</th><th>Pos</th><th>Team</th><th class="num">Season Pts</th></tr></thead>
+        <tbody id="seasonLeaders2025"></tbody></table>
+      </div>
+      <div class="card">
+        <h2>Worst Starts <span class="num">Bottom 10</span></h2>
+        <p class="sub">The lowest-scoring starters of the season — mostly a defense hall of shame.</p>
+        <table><thead><tr><th>Player</th><th>Team</th><th class="num">Week</th><th class="num">Pts</th></tr></thead>
+        <tbody id="worstStarts2025"></tbody></table>
+      </div>
+    </div>
+    <div class="panel" data-panel="scores">
+      <div class="card">
+        <h2>Matchup Log <span class="num">Weeks 1–17</span></h2>
+        <p class="sub">Every regular-season matchup, filterable by team or week.</p>
+        <div class="filter-bar">
+          <div class="filter-group"><label>Team</label><select id="scoreTeamFilter2025"><option value="">All teams</option></select></div>
+          <div class="filter-group"><label>Week</label><select id="scoreWeekFilter2025"><option value="">All weeks</option></select></div>
+          <button class="filter-clear" onclick="clearFilters('2025','score')">Clear</button>
+        </div>
+        <div class="filter-count" id="scoreCount2025"></div>
+        <table><thead><tr><th>Wk</th><th>Matchup</th><th class="num">Score</th><th class="num">Margin</th></tr></thead><tbody id="scores2025"></tbody></table>
+      </div>
+    </div>
+  </div>
+
+  <div class="season-block" id="s2024">
+    <div class="panel active" data-panel="standings">
+      <div class="card">
+        <h2>Final Standings <span class="num">2024</span></h2>
+        <p class="sub">10 teams · several managers who've since rotated out of the league.</p>
+        <table><thead><tr><th>#</th><th>Team</th><th class="num">Record</th><th class="num">Win %</th><th class="num">Pts For</th><th class="num">Pts Against</th><th class="num">Diff</th><th class="num">Seed</th></tr></thead>
+        <tbody id="standings2024"></tbody></table>
+      </div>
+    </div>
+    <div class="panel" data-panel="teamrecords">
+      <div class="card">
+        <h2>Team Record Highlights <span class="num">2024</span></h2>
+        <div class="record-grid" id="teamRecords2024"></div>
+      </div>
+      <div class="card">
+        <h2>Points For <span class="num">Season Total</span></h2>
+        <div id="pointsBars2024"></div>
+      </div>
+      <div class="card">
+        <h2>Points Against <span class="num">Season Total</span></h2>
+        <p class="sub">Lower is better — how much a team's opponents scored on them across the season.</p>
+        <div id="paBars2024"></div>
+      </div>
+    </div>
+    <div class="panel" data-panel="playerrecords">
+      <div class="card">
+        <h2>Individual Performances <span class="num">Top 50</span></h2>
+        <p class="sub">Every player-week from 2024, filterable by team, position, or name.</p>
+        <div class="filter-bar">
+          <div class="filter-group"><label>Team</label><select id="perfTeamFilter2024"><option value="">All teams</option></select></div>
+          <div class="filter-group"><label>Position</label><select id="perfPosFilter2024"><option value="">All positions</option></select></div>
+          <div class="filter-group"><label>Player search</label><input type="text" id="perfSearchFilter2024" placeholder="e.g. Chase"></div>
+          <button class="filter-clear" onclick="clearFilters('2024','perf')">Clear</button>
+        </div>
+        <div class="filter-count" id="perfCount2024"></div>
+        <table><thead><tr><th>#</th><th>Player</th><th>Pos</th><th>Team</th><th class="num">Week</th><th class="num">Pts</th></tr></thead>
+        <tbody id="topPerf2024"></tbody></table>
+      </div>
+      <div class="card">
+        <h2>Top 10 by Position</h2>
+        <p class="sub">Click a position to see its top 10 single-week performances of the season.</p>
+        <div class="pos-pills" id="posPills2024"></div>
+        <table><thead><tr><th>#</th><th>Player</th><th>Team</th><th class="num">Week</th><th class="num">Pts</th></tr></thead>
+        <tbody id="posTop10_2024"></tbody></table>
+      </div>
+      <div class="card">
+        <h2>Season Point Leaders <span class="num">Top 30</span></h2>
+        <p class="sub">Starters only, filterable by team or position.</p>
+        <div class="filter-bar">
+          <div class="filter-group"><label>Team</label><select id="szTeamFilter2024"><option value="">All teams</option></select></div>
+          <div class="filter-group"><label>Position</label><select id="szPosFilter2024"><option value="">All positions</option></select></div>
+          <button class="filter-clear" onclick="clearFilters('2024','sz')">Clear</button>
+        </div>
+        <table><thead><tr><th>#</th><th>Player</th><th>Pos</th><th>Team</th><th class="num">Season Pts</th></tr></thead>
+        <tbody id="seasonLeaders2024"></tbody></table>
+      </div>
+      <div class="card">
+        <h2>Worst Starts <span class="num">Bottom 10</span></h2>
+        <p class="sub">The lowest-scoring starters of the season — mostly a defense hall of shame.</p>
+        <table><thead><tr><th>Player</th><th>Team</th><th class="num">Week</th><th class="num">Pts</th></tr></thead>
+        <tbody id="worstStarts2024"></tbody></table>
+      </div>
+    </div>
+    <div class="panel" data-panel="scores">
+      <div class="card">
+        <h2>Matchup Log <span class="num">Weeks 1–17</span></h2>
+        <p class="sub">Every regular-season matchup, filterable by team or week.</p>
+        <div class="filter-bar">
+          <div class="filter-group"><label>Team</label><select id="scoreTeamFilter2024"><option value="">All teams</option></select></div>
+          <div class="filter-group"><label>Week</label><select id="scoreWeekFilter2024"><option value="">All weeks</option></select></div>
+          <button class="filter-clear" onclick="clearFilters('2024','score')">Clear</button>
+        </div>
+        <div class="filter-count" id="scoreCount2024"></div>
+        <table><thead><tr><th>Wk</th><th>Matchup</th><th class="num">Score</th><th class="num">Margin</th></tr></thead><tbody id="scores2024"></tbody></table>
+      </div>
+    </div>
+    <div class="note"><b>Note —</b> ten teams competed this season vs. eight in 2025 — Alex Fankhauser, Dillon Deason, and Puneet Nunsavathu played in 2024 but not 2025.</div>
+  </div>
+
+  <div class="season-block" id="salltime">
+    <div class="card">
+      <h2>All-Time Standings <span class="num">2024–2025</span></h2>
+      <p class="sub">Every team-season kept separate — 18 rows total, ranked by win %. Same manager can appear more than once under different team names.</p>
+      <div class="filter-bar">
+        <div class="filter-group"><label>Manager</label><select id="allTimeMgrFilter"><option value="">All managers</option></select></div>
+        <div class="filter-group"><label>Season</label><select id="allTimeYearFilter"><option value="">Both seasons</option><option value="2025">2025</option><option value="2024">2024</option></select></div>
+        <button class="filter-clear" onclick="clearAllTimeStandingsFilter()">Clear</button>
+      </div>
+      <div class="filter-count" id="allTimeStandingsCount"></div>
+      <table><thead><tr><th>#</th><th>Team</th><th>Manager</th><th class="num">Year</th><th class="num">Record</th><th class="num">Win %</th><th class="num">Pts For</th><th class="num">Pts Against</th></tr></thead>
+      <tbody id="allTimeStandings"></tbody></table>
+    </div>
+    <div class="card">
+      <h2>All-Time Top Performances <span class="num">Top 10</span></h2>
+      <p class="sub">Best single-week performances across both seasons, any position.</p>
+      <table><thead><tr><th>#</th><th>Player</th><th>Pos</th><th>Manager</th><th class="num">Year</th><th class="num">Week</th><th class="num">Pts</th></tr></thead>
+      <tbody id="allTimeTopPerf"></tbody></table>
+    </div>
+    <div class="card">
+      <h2>All-Time Top 10 by Position</h2>
+      <p class="sub">Best single-week performance at each position across both seasons.</p>
+      <div class="pos-pills" id="allTimePosPills"></div>
+      <table><thead><tr><th>#</th><th>Player</th><th>Manager</th><th class="num">Year</th><th class="num">Week</th><th class="num">Pts</th></tr></thead>
+      <tbody id="allTimePosTop10"></tbody></table>
+    </div>
+    <div class="card">
+      <h2>All-Time Career Leaders <span class="num">Top 10</span></h2>
+      <p class="sub">Players who logged big seasons in both years have their totals added together.</p>
+      <table><thead><tr><th>#</th><th>Player</th><th>Manager(s)</th><th class="num">Combined Pts</th></tr></thead>
+      <tbody id="allTimeCareerLeaders"></tbody></table>
+    </div>
+  </div>
+
+  <footer>BUILT FROM LEAGUE ID 1533502050 · FULL WEEKLY BOX SCORE HISTORY</footer>
+</div>
+
+<script>
+const RECORDS = {"2025": {"top_performances": [{"year": "2025", "week": 12, "team": "Brock That Body", "mgr": "Cole Dalton", "player": "Jahmyr Gibbs", "pos": "RB", "pts": 55.4, "started": true}, {"year": "2025", "week": 10, "team": "Cade's Eagles", "mgr": "Cade Dalton", "player": "Jonathan Taylor", "pos": "RB", "pts": 49.6, "started": true}, {"year": "2025", "week": 16, "team": "Brock That Body", "mgr": "Cole Dalton", "player": "Puka Nacua", "pos": "WR", "pts": 46.5, "started": true}, {"year": "2025", "week": 15, "team": "Drake Dynasty", "mgr": "Nico Dattilo", "player": "Kyle Pitts Sr.", "pos": "TE", "pts": 45.6, "started": true}, {"year": "2025", "week": 17, "team": "De'Von Intervention", "mgr": "Jacob Thompson", "player": "Derrick Henry", "pos": "RB", "pts": 45.6, "started": true}, {"year": "2025", "week": 9, "team": "Brock That Body", "mgr": "Cole Dalton", "player": "Brock Bowers", "pos": "TE", "pts": 43.3, "started": true}, {"year": "2025", "week": 11, "team": "Air Allen", "mgr": "Dylan Northeim", "player": "Josh Allen", "pos": "QB", "pts": 42.68, "started": true}, {"year": "2025", "week": 15, "team": "De'Von Intervention", "mgr": "Jacob Thompson", "player": "Amon-Ra St. Brown", "pos": "WR", "pts": 41.4, "started": true}, {"year": "2025", "week": 10, "team": "De'Von Intervention", "mgr": "Jacob Thompson", "player": "De'Von Achane", "pos": "RB", "pts": 40.5, "started": true}, {"year": "2025", "week": 17, "team": "Get Komfy", "mgr": "Rylan Wilson", "player": "Bijan Robinson", "pos": "RB", "pts": 39.9, "started": true}, {"year": "2025", "week": 2, "team": "Air Allen", "mgr": "Dylan Northeim", "player": "Amon-Ra St. Brown", "pos": "WR", "pts": 39.2, "started": true}, {"year": "2025", "week": 7, "team": "Air Allen", "mgr": "Dylan Northeim", "player": "Christian McCaffrey", "pos": "RB", "pts": 39.1, "started": true}, {"year": "2025", "week": 9, "team": "Drake Dynasty", "mgr": "Nico Dattilo", "player": "Drake London", "pos": "WR", "pts": 38.8, "started": true}, {"year": "2025", "week": 1, "team": "Air Allen", "mgr": "Dylan Northeim", "player": "Josh Allen", "pos": "QB", "pts": 38.76, "started": true}, {"year": "2025", "week": 10, "team": "Brock That Body", "mgr": "Cole Dalton", "player": "Jahmyr Gibbs", "pos": "RB", "pts": 38.2, "started": true}, {"year": "2025", "week": 7, "team": "Brock That Body", "mgr": "Cole Dalton", "player": "Ja'Marr Chase", "pos": "WR", "pts": 38.1, "started": true}, {"year": "2025", "week": 14, "team": "Air Allen", "mgr": "Dylan Northeim", "player": "Josh Allen", "pos": "QB", "pts": 37.84, "started": true}, {"year": "2025", "week": 2, "team": "G SPITTER", "mgr": "Grant Wright", "player": "Malik Nabers", "pos": "WR", "pts": 37.7, "started": true}, {"year": "2025", "week": 8, "team": "Cade's Eagles", "mgr": "Cade Dalton", "player": "Jonathan Taylor", "pos": "RB", "pts": 37.4, "started": true}, {"year": "2025", "week": 15, "team": "Drake Dynasty", "mgr": "Nico Dattilo", "player": "Trey McBride", "pos": "TE", "pts": 37.4, "started": true}, {"year": "2025", "week": 14, "team": "De'Von Intervention", "mgr": "Jacob Thompson", "player": "Michael Wilson", "pos": "WR", "pts": 37.2, "started": true}, {"year": "2025", "week": 12, "team": "Drake Dynasty", "mgr": "Nico Dattilo", "player": "Jaxon Smith-Njigba", "pos": "WR", "pts": 37.1, "started": true}, {"year": "2025", "week": 14, "team": "Brock That Body", "mgr": "Cole Dalton", "player": "Jahmyr Gibbs", "pos": "RB", "pts": 37, "started": true}, {"year": "2025", "week": 7, "team": "Brock That Body", "mgr": "Cole Dalton", "player": "Jahmyr Gibbs", "pos": "RB", "pts": 36.8, "started": true}, {"year": "2025", "week": 16, "team": "Get Komfy", "mgr": "Rylan Wilson", "player": "Chris Olave", "pos": "WR", "pts": 36.8, "started": true}, {"year": "2025", "week": 2, "team": "Drake Dynasty", "mgr": "Nico Dattilo", "player": "Ja'Marr Chase", "pos": "WR", "pts": 36.5, "started": true}, {"year": "2025", "week": 4, "team": "Brock That Body", "mgr": "Cole Dalton", "player": "Puka Nacua", "pos": "WR", "pts": 36, "started": true}, {"year": "2025", "week": 6, "team": "Get Komfy", "mgr": "Rylan Wilson", "player": "Bijan Robinson", "pos": "RB", "pts": 35.8, "started": true}, {"year": "2025", "week": 14, "team": "Brock That Body", "mgr": "Cole Dalton", "player": "Puka Nacua", "pos": "WR", "pts": 35.7, "started": true}, {"year": "2025", "week": 13, "team": "Cade's Eagles", "mgr": "Cade Dalton", "player": "A.J. Brown", "pos": "WR", "pts": 35.2, "started": true}, {"year": "2025", "week": 11, "team": "Air Allen", "mgr": "Dylan Northeim", "player": "Christian McCaffrey", "pos": "RB", "pts": 35.1, "started": true}, {"year": "2025", "week": 9, "team": "Air Allen", "mgr": "Dylan Northeim", "player": "Christian McCaffrey", "pos": "RB", "pts": 34.3, "started": true}, {"year": "2025", "week": 7, "team": "Cade's Eagles", "mgr": "Cade Dalton", "player": "Jonathan Taylor", "pos": "RB", "pts": 34.2, "started": true}, {"year": "2025", "week": 6, "team": "De'Von Intervention", "mgr": "Jacob Thompson", "player": "Rico Dowdle", "pos": "RB", "pts": 33.9, "started": true}, {"year": "2025", "week": 8, "team": "Cade's Eagles", "mgr": "Cade Dalton", "player": "James Cook III", "pos": "RB", "pts": 33.6, "started": true}, {"year": "2025", "week": 4, "team": "Cole \"Brock That Body\" Dalton", "mgr": "Jack Sevier", "player": "Ashton Jeanty", "pos": "RB", "pts": 33.5, "started": true}, {"year": "2025", "week": 8, "team": "Cole \"Brock That Body\" Dalton", "mgr": "Jack Sevier", "player": "Saquon Barkley", "pos": "RB", "pts": 33.4, "started": true}, {"year": "2025", "week": 8, "team": "Get Komfy", "mgr": "Rylan Wilson", "player": "Tucker Kraft", "pos": "TE", "pts": 33.3, "started": true}, {"year": "2025", "week": 9, "team": "Brock That Body", "mgr": "Cole Dalton", "player": "Tee Higgins", "pos": "WR", "pts": 33.1, "started": true}, {"year": "2025", "week": 16, "team": "Drake Dynasty", "mgr": "Nico Dattilo", "player": "Chase Brown", "pos": "RB", "pts": 32.9, "started": true}, {"year": "2025", "week": 8, "team": "Drake Dynasty", "mgr": "Nico Dattilo", "player": "Breece Hall", "pos": "RB", "pts": 32.86, "started": true}, {"year": "2025", "week": 3, "team": "Cade's Eagles", "mgr": "Cade Dalton", "player": "Jonathan Taylor", "pos": "RB", "pts": 32.8, "started": true}, {"year": "2025", "week": 16, "team": "Air Allen", "mgr": "Dylan Northeim", "player": "Christian McCaffrey", "pos": "RB", "pts": 32.6, "started": true}, {"year": "2025", "week": 3, "team": "G SPITTER", "mgr": "Grant Wright", "player": "Vikings D/ST", "pos": "D/ST", "pts": 32, "started": true}, {"year": "2025", "week": 6, "team": "Drake Dynasty", "mgr": "Nico Dattilo", "player": "Josh Jacobs", "pos": "RB", "pts": 32, "started": true}, {"year": "2025", "week": 6, "team": "G SPITTER", "mgr": "Grant Wright", "player": "George Pickens", "pos": "WR", "pts": 31.8, "started": true}, {"year": "2025", "week": 6, "team": "Drake Dynasty", "mgr": "Nico Dattilo", "player": "Drake London", "pos": "WR", "pts": 31.8, "started": true}, {"year": "2025", "week": 16, "team": "Cole \"Brock That Body\" Dalton", "mgr": "Jack Sevier", "player": "Ashton Jeanty", "pos": "RB", "pts": 31.8, "started": true}, {"year": "2025", "week": 4, "team": "Drake Dynasty", "mgr": "Nico Dattilo", "player": "Josh Jacobs", "pos": "RB", "pts": 31.7, "started": true}, {"year": "2025", "week": 5, "team": "Cade's Eagles", "mgr": "Cade Dalton", "player": "Jonathan Taylor", "pos": "RB", "pts": 31.6, "started": true}], "best_by_position": {"QB": {"year": "2025", "week": 11, "team": "Air Allen", "mgr": "Dylan Northeim", "player": "Josh Allen", "pos": "QB", "pts": 42.68, "started": true}, "RB": {"year": "2025", "week": 12, "team": "Brock That Body", "mgr": "Cole Dalton", "player": "Jahmyr Gibbs", "pos": "RB", "pts": 55.4, "started": true}, "WR": {"year": "2025", "week": 16, "team": "Brock That Body", "mgr": "Cole Dalton", "player": "Puka Nacua", "pos": "WR", "pts": 46.5, "started": true}, "TE": {"year": "2025", "week": 15, "team": "Drake Dynasty", "mgr": "Nico Dattilo", "player": "Kyle Pitts Sr.", "pos": "TE", "pts": 45.6, "started": true}, "K": {"year": "2025", "week": 14, "team": "Air Allen", "mgr": "Dylan Northeim", "player": "Brandon Aubrey", "pos": "K", "pts": 24, "started": true}, "D/ST": {"year": "2025", "week": 3, "team": "G SPITTER", "mgr": "Grant Wright", "player": "Vikings D/ST", "pos": "D/ST", "pts": 32, "started": true}}, "worst_starts": [{"year": "2025", "week": 2, "team": "Cole \"Brock That Body\" Dalton", "mgr": "Jack Sevier", "player": "Broncos D/ST", "pos": "D/ST", "pts": -5, "started": true}, {"year": "2025", "week": 2, "team": "De'Von Intervention", "mgr": "Jacob Thompson", "player": "Cowboys D/ST", "pos": "D/ST", "pts": -4, "started": true}, {"year": "2025", "week": 7, "team": "Cade's Eagles", "mgr": "Cade Dalton", "player": "Steelers D/ST", "pos": "D/ST", "pts": -4, "started": true}, {"year": "2025", "week": 16, "team": "Get Komfy", "mgr": "Rylan Wilson", "player": "Seahawks D/ST", "pos": "D/ST", "pts": -4, "started": true}, {"year": "2025", "week": 12, "team": "Air Allen", "mgr": "Dylan Northeim", "player": "Lions D/ST", "pos": "D/ST", "pts": -3, "started": true}, {"year": "2025", "week": 15, "team": "Brock That Body", "mgr": "Cole Dalton", "player": "Buccaneers D/ST", "pos": "D/ST", "pts": -3, "started": true}, {"year": "2025", "week": 5, "team": "Drake Dynasty", "mgr": "Nico Dattilo", "player": "Rams D/ST", "pos": "D/ST", "pts": -2, "started": true}, {"year": "2025", "week": 8, "team": "G SPITTER", "mgr": "Grant Wright", "player": "Vikings D/ST", "pos": "D/ST", "pts": -2, "started": true}, {"year": "2025", "week": 3, "team": "Air Allen", "mgr": "Dylan Northeim", "player": "Bengals D/ST", "pos": "D/ST", "pts": -1, "started": true}, {"year": "2025", "week": 6, "team": "Cole \"Brock That Body\" Dalton", "mgr": "Jack Sevier", "player": "Cam Little", "pos": "K", "pts": -1, "started": true}, {"year": "2025", "week": 11, "team": "G SPITTER", "mgr": "Grant Wright", "player": "Chargers D/ST", "pos": "D/ST", "pts": -1, "started": true}, {"year": "2025", "week": 11, "team": "Get Komfy", "mgr": "Rylan Wilson", "player": "Falcons D/ST", "pos": "D/ST", "pts": -1, "started": true}, {"year": "2025", "week": 3, "team": "Cole \"Brock That Body\" Dalton", "mgr": "Jack Sevier", "player": "CeeDee Lamb", "pos": "WR", "pts": 0, "started": true}, {"year": "2025", "week": 6, "team": "Get Komfy", "mgr": "Rylan Wilson", "player": "Eagles D/ST", "pos": "D/ST", "pts": 0, "started": true}, {"year": "2025", "week": 6, "team": "De'Von Intervention", "mgr": "Jacob Thompson", "player": "Browns D/ST", "pos": "D/ST", "pts": 0, "started": true}, {"year": "2025", "week": 8, "team": "Air Allen", "mgr": "Dylan Northeim", "player": "Jake Ferguson", "pos": "TE", "pts": 0, "started": true}, {"year": "2025", "week": 8, "team": "Brock That Body", "mgr": "Cole Dalton", "player": "Quentin Johnston", "pos": "WR", "pts": 0, "started": true}, {"year": "2025", "week": 8, "team": "Cole \"Brock That Body\" Dalton", "mgr": "Jack Sevier", "player": "Falcons D/ST", "pos": "D/ST", "pts": 0, "started": true}, {"year": "2025", "week": 9, "team": "Drake Dynasty", "mgr": "Nico Dattilo", "player": "Rome Odunze", "pos": "WR", "pts": 0, "started": true}, {"year": "2025", "week": 10, "team": "Get Komfy", "mgr": "Rylan Wilson", "player": "Garrett Wilson", "pos": "WR", "pts": 0, "started": true}, {"year": "2025", "week": 12, "team": "Cade's Eagles", "mgr": "Cade Dalton", "player": "Jameson Williams", "pos": "WR", "pts": 0, "started": true}, {"year": "2025", "week": 13, "team": "De'Von Intervention", "mgr": "Jacob Thompson", "player": "Amon-Ra St. Brown", "pos": "WR", "pts": 0, "started": true}, {"year": "2025", "week": 14, "team": "Drake Dynasty", "mgr": "Nico Dattilo", "player": "Ravens D/ST", "pos": "D/ST", "pts": 0, "started": true}, {"year": "2025", "week": 15, "team": "G SPITTER", "mgr": "Grant Wright", "player": "49ers D/ST", "pos": "D/ST", "pts": 0, "started": true}, {"year": "2025", "week": 15, "team": "Cole \"Brock That Body\" Dalton", "mgr": "Jack Sevier", "player": "Evan McPherson", "pos": "K", "pts": 0, "started": true}], "top_season_scorers": [{"player": "Christian McCaffrey", "pts": 404.9, "team": "Air Allen", "mgr": "Dylan Northeim", "pos": "RB"}, {"player": "Josh Allen", "pts": 364.62, "team": "Air Allen", "mgr": "Dylan Northeim", "pos": "QB"}, {"player": "Bijan Robinson", "pts": 363.5, "team": "Get Komfy", "mgr": "Rylan Wilson", "pos": "RB"}, {"player": "Jonathan Taylor", "pts": 356.4, "team": "Cade's Eagles", "mgr": "Cade Dalton", "pos": "RB"}, {"player": "Puka Nacua", "pts": 349.0, "team": "Brock That Body", "mgr": "Cole Dalton", "pos": "WR"}, {"player": "Jahmyr Gibbs", "pts": 346.6, "team": "Brock That Body", "mgr": "Cole Dalton", "pos": "RB"}, {"player": "Jaxon Smith-Njigba", "pts": 345.5, "team": "Drake Dynasty", "mgr": "Nico Dattilo", "pos": "WR"}, {"player": "De'Von Achane", "pts": 322.8, "team": "De'Von Intervention", "mgr": "Jacob Thompson", "pos": "RB"}, {"player": "Trey McBride", "pts": 302.4, "team": "Drake Dynasty", "mgr": "Nico Dattilo", "pos": "TE"}, {"player": "James Cook III", "pts": 300.7, "team": "Cade's Eagles", "mgr": "Cade Dalton", "pos": "RB"}, {"player": "Amon-Ra St. Brown", "pts": 299.1, "team": "De'Von Intervention", "mgr": "Jacob Thompson", "pos": "WR"}, {"player": "Ja'Marr Chase", "pts": 290.0, "team": "Brock That Body", "mgr": "Cole Dalton", "pos": "WR"}, {"player": "Patrick Mahomes", "pts": 285.68, "team": "Get Komfy", "mgr": "Rylan Wilson", "pos": "QB"}, {"player": "Jalen Hurts", "pts": 267.26, "team": "Cade's Eagles", "mgr": "Cade Dalton", "pos": "QB"}, {"player": "Derrick Henry", "pts": 266.9, "team": "De'Von Intervention", "mgr": "Jacob Thompson", "pos": "RB"}, {"player": "Kyren Williams", "pts": 252.2, "team": "G SPITTER", "mgr": "Grant Wright", "pos": "RB"}, {"player": "Josh Jacobs", "pts": 237.1, "team": "Drake Dynasty", "mgr": "Nico Dattilo", "pos": "RB"}, {"player": "George Pickens", "pts": 232.8, "team": "G SPITTER", "mgr": "Grant Wright", "pos": "WR"}, {"player": "Ashton Jeanty", "pts": 232.7, "team": "Cole \"Brock That Body\" Dalton", "mgr": "Jack Sevier", "pos": "RB"}, {"player": "Saquon Barkley", "pts": 232.3, "team": "Cole \"Brock That Body\" Dalton", "mgr": "Jack Sevier", "pos": "RB"}, {"player": "Drake Maye", "pts": 227.24, "team": "Drake Dynasty", "mgr": "Nico Dattilo", "pos": "QB"}, {"player": "Nico Collins", "pts": 226.2, "team": "De'Von Intervention", "mgr": "Jacob Thompson", "pos": "WR"}, {"player": "Davante Adams", "pts": 222.9, "team": "Cade's Eagles", "mgr": "Cade Dalton", "pos": "WR"}, {"player": "A.J. Brown", "pts": 220.3, "team": "Cade's Eagles", "mgr": "Cade Dalton", "pos": "WR"}, {"player": "Justin Herbert", "pts": 206.62, "team": "Get Komfy", "mgr": "Rylan Wilson", "pos": "QB"}, {"player": "CeeDee Lamb", "pts": 199.5, "team": "Cole \"Brock That Body\" Dalton", "mgr": "Jack Sevier", "pos": "WR"}, {"player": "Javonte Williams", "pts": 197.4, "team": "Cole \"Brock That Body\" Dalton", "mgr": "Jack Sevier", "pos": "RB"}, {"player": "Chase Brown", "pts": 186.2, "team": "Drake Dynasty", "mgr": "Nico Dattilo", "pos": "RB"}, {"player": "Brandon Aubrey", "pts": 180.6, "team": "Air Allen", "mgr": "Dylan Northeim", "pos": "K"}, {"player": "Justin Jefferson", "pts": 173.7, "team": "Drake Dynasty", "mgr": "Nico Dattilo", "pos": "WR"}], "highest_team_week": {"year": "2025", "week": 8, "team": "Cade's Eagles", "mgr": "Cade Dalton", "pts": 185.06}, "lowest_team_week": {"year": "2025", "week": 17, "team": "G SPITTER", "mgr": "Grant Wright", "pts": 61.08}, "highest_pa_week": {"team": "Cole \"Brock That Body\" Dalton", "mgr": "Jack Sevier", "week": 8, "pa": 185.06, "opp": "Cade's Eagles"}, "lowest_pa_week": {"team": "Cole \"Brock That Body\" Dalton", "mgr": "Jack Sevier", "week": 17, "pa": 61.08, "opp": "G SPITTER"}, "pa_summary": [{"team": "Drake Dynasty", "mgr": "Nico Dattilo", "pa": 1912.98}, {"team": "Brock That Body", "mgr": "Cole Dalton", "pa": 2020.98}, {"team": "De'Von Intervention", "mgr": "Jacob Thompson", "pa": 2121.68}, {"team": "Air Allen", "mgr": "Dylan Northeim", "pa": 2137.7}, {"team": "Get Komfy", "mgr": "Rylan Wilson", "pa": 2143.44}, {"team": "Cole \"Brock That Body\" Dalton", "mgr": "Jack Sevier", "pa": 2190.92}, {"team": "Cade's Eagles", "mgr": "Cade Dalton", "pa": 2229.18}, {"team": "G SPITTER", "mgr": "Grant Wright", "pa": 2259.06}], "closest": {"year": "2025", "week": 1, "home": "De'Von Intervention", "hmgr": "Jacob Thompson", "hpts": 105.34, "away": "G SPITTER", "amgr": "Grant Wright", "apts": 105.26, "margin": 0.08, "winner": "De'Von Intervention", "winmgr": "Jacob Thompson", "loser": "G SPITTER"}, "biggest_blowout": {"year": "2025", "week": 6, "home": "Drake Dynasty", "hmgr": "Nico Dattilo", "hpts": 177.54, "away": "Cole \"Brock That Body\" Dalton", "amgr": "Jack Sevier", "apts": 67.2, "margin": 110.34, "winner": "Drake Dynasty", "winmgr": "Nico Dattilo", "loser": "Cole \"Brock That Body\" Dalton"}, "all_margins": [{"year": "2025", "week": 1, "home": "De'Von Intervention", "hmgr": "Jacob Thompson", "hpts": 105.34, "away": "G SPITTER", "amgr": "Grant Wright", "apts": 105.26, "margin": 0.08, "winner": "De'Von Intervention", "winmgr": "Jacob Thompson", "loser": "G SPITTER"}, {"year": "2025", "week": 14, "home": "G SPITTER", "hmgr": "Grant Wright", "hpts": 116.06, "away": "Drake Dynasty", "amgr": "Nico Dattilo", "apts": 112.36, "margin": 3.7, "winner": "G SPITTER", "winmgr": "Grant Wright", "loser": "Drake Dynasty"}, {"year": "2025", "week": 4, "home": "Get Komfy", "hmgr": "Rylan Wilson", "hpts": 142.5, "away": "Air Allen", "amgr": "Dylan Northeim", "apts": 146.36, "margin": 3.86, "winner": "Air Allen", "winmgr": "Dylan Northeim", "loser": "Get Komfy"}, {"year": "2025", "week": 12, "home": "G SPITTER", "hmgr": "Grant Wright", "hpts": 131.26, "away": "Cole \"Brock That Body\" Dalton", "amgr": "Jack Sevier", "apts": 136.44, "margin": 5.18, "winner": "Cole \"Brock That Body\" Dalton", "winmgr": "Jack Sevier", "loser": "G SPITTER"}, {"year": "2025", "week": 11, "home": "Brock That Body", "hmgr": "Cole Dalton", "hpts": 82.94, "away": "Cole \"Brock That Body\" Dalton", "amgr": "Jack Sevier", "apts": 88.34, "margin": 5.4, "winner": "Cole \"Brock That Body\" Dalton", "winmgr": "Jack Sevier", "loser": "Brock That Body"}, {"year": "2025", "week": 15, "home": "Get Komfy", "hmgr": "Rylan Wilson", "hpts": 110.86, "away": "Brock That Body", "amgr": "Cole Dalton", "apts": 118.1, "margin": 7.24, "winner": "Brock That Body", "winmgr": "Cole Dalton", "loser": "Get Komfy"}, {"year": "2025", "week": 2, "home": "Cade's Eagles", "hmgr": "Cade Dalton", "hpts": 118.14, "away": "Drake Dynasty", "amgr": "Nico Dattilo", "apts": 125.4, "margin": 7.26, "winner": "Drake Dynasty", "winmgr": "Nico Dattilo", "loser": "Cade's Eagles"}, {"year": "2025", "week": 11, "home": "De'Von Intervention", "hmgr": "Jacob Thompson", "hpts": 123.02, "away": "Drake Dynasty", "amgr": "Nico Dattilo", "apts": 130.44, "margin": 7.42, "winner": "Drake Dynasty", "winmgr": "Nico Dattilo", "loser": "De'Von Intervention"}, {"year": "2025", "week": 5, "home": "Cade's Eagles", "hmgr": "Cade Dalton", "hpts": 144.1, "away": "Get Komfy", "amgr": "Rylan Wilson", "apts": 152.12, "margin": 8.02, "winner": "Get Komfy", "winmgr": "Rylan Wilson", "loser": "Cade's Eagles"}, {"year": "2025", "week": 6, "home": "G SPITTER", "hmgr": "Grant Wright", "hpts": 149.16, "away": "Get Komfy", "amgr": "Rylan Wilson", "apts": 141.08, "margin": 8.08, "winner": "G SPITTER", "winmgr": "Grant Wright", "loser": "Get Komfy"}, {"year": "2025", "week": 5, "home": "Brock That Body", "hmgr": "Cole Dalton", "hpts": 106.1, "away": "Drake Dynasty", "amgr": "Nico Dattilo", "apts": 114.92, "margin": 8.82, "winner": "Drake Dynasty", "winmgr": "Nico Dattilo", "loser": "Brock That Body"}, {"year": "2025", "week": 5, "home": "Cole \"Brock That Body\" Dalton", "hmgr": "Jack Sevier", "hpts": 116.52, "away": "G SPITTER", "amgr": "Grant Wright", "apts": 125.38, "margin": 8.86, "winner": "G SPITTER", "winmgr": "Grant Wright", "loser": "Cole \"Brock That Body\" Dalton"}, {"year": "2025", "week": 13, "home": "Cole \"Brock That Body\" Dalton", "hmgr": "Jack Sevier", "hpts": 109.76, "away": "Drake Dynasty", "amgr": "Nico Dattilo", "apts": 118.78, "margin": 9.02, "winner": "Drake Dynasty", "winmgr": "Nico Dattilo", "loser": "Cole \"Brock That Body\" Dalton"}, {"year": "2025", "week": 12, "home": "Drake Dynasty", "hmgr": "Nico Dattilo", "hpts": 147.06, "away": "Brock That Body", "amgr": "Cole Dalton", "apts": 137.92, "margin": 9.14, "winner": "Drake Dynasty", "winmgr": "Nico Dattilo", "loser": "Brock That Body"}, {"year": "2025", "week": 13, "home": "Cade's Eagles", "hmgr": "Cade Dalton", "hpts": 149.3, "away": "De'Von Intervention", "amgr": "Jacob Thompson", "apts": 138.6, "margin": 10.7, "winner": "Cade's Eagles", "winmgr": "Cade Dalton", "loser": "De'Von Intervention"}, {"year": "2025", "week": 3, "home": "Air Allen", "hmgr": "Dylan Northeim", "hpts": 130.72, "away": "Cade's Eagles", "amgr": "Cade Dalton", "apts": 141.54, "margin": 10.82, "winner": "Cade's Eagles", "winmgr": "Cade Dalton", "loser": "Air Allen"}, {"year": "2025", "week": 3, "home": "Drake Dynasty", "hmgr": "Nico Dattilo", "hpts": 109.92, "away": "Get Komfy", "amgr": "Rylan Wilson", "apts": 120.96, "margin": 11.04, "winner": "Get Komfy", "winmgr": "Rylan Wilson", "loser": "Drake Dynasty"}, {"year": "2025", "week": 8, "home": "Brock That Body", "hmgr": "Cole Dalton", "hpts": 110.58, "away": "Get Komfy", "amgr": "Rylan Wilson", "apts": 122.36, "margin": 11.78, "winner": "Get Komfy", "winmgr": "Rylan Wilson", "loser": "Brock That Body"}, {"year": "2025", "week": 2, "home": "G SPITTER", "hmgr": "Grant Wright", "hpts": 130, "away": "Air Allen", "amgr": "Dylan Northeim", "apts": 142.92, "margin": 12.92, "winner": "Air Allen", "winmgr": "Dylan Northeim", "loser": "G SPITTER"}, {"year": "2025", "week": 16, "home": "Get Komfy", "hmgr": "Rylan Wilson", "hpts": 146.6, "away": "G SPITTER", "amgr": "Grant Wright", "apts": 131.46, "margin": 15.14, "winner": "Get Komfy", "winmgr": "Rylan Wilson", "loser": "G SPITTER"}, {"year": "2025", "week": 9, "home": "Get Komfy", "hmgr": "Rylan Wilson", "hpts": 113, "away": "Cole \"Brock That Body\" Dalton", "amgr": "Jack Sevier", "apts": 128.48, "margin": 15.48, "winner": "Cole \"Brock That Body\" Dalton", "winmgr": "Jack Sevier", "loser": "Get Komfy"}, {"year": "2025", "week": 10, "home": "Cade's Eagles", "hmgr": "Cade Dalton", "hpts": 128.02, "away": "Air Allen", "amgr": "Dylan Northeim", "apts": 110.94, "margin": 17.08, "winner": "Cade's Eagles", "winmgr": "Cade Dalton", "loser": "Air Allen"}, {"year": "2025", "week": 16, "home": "Air Allen", "hmgr": "Dylan Northeim", "hpts": 123.7, "away": "Brock That Body", "amgr": "Cole Dalton", "apts": 141.62, "margin": 17.92, "winner": "Brock That Body", "winmgr": "Cole Dalton", "loser": "Air Allen"}, {"year": "2025", "week": 17, "home": "Air Allen", "hmgr": "Dylan Northeim", "hpts": 135.18, "away": "De'Von Intervention", "amgr": "Jacob Thompson", "apts": 153.48, "margin": 18.3, "winner": "De'Von Intervention", "winmgr": "Jacob Thompson", "loser": "Air Allen"}, {"year": "2025", "week": 14, "home": "De'Von Intervention", "hmgr": "Jacob Thompson", "hpts": 135.44, "away": "Get Komfy", "amgr": "Rylan Wilson", "apts": 115.8, "margin": 19.64, "winner": "De'Von Intervention", "winmgr": "Jacob Thompson", "loser": "Get Komfy"}, {"year": "2025", "week": 9, "home": "Air Allen", "hmgr": "Dylan Northeim", "hpts": 113.72, "away": "G SPITTER", "amgr": "Grant Wright", "apts": 93.6, "margin": 20.12, "winner": "Air Allen", "winmgr": "Dylan Northeim", "loser": "G SPITTER"}, {"year": "2025", "week": 11, "home": "Cade's Eagles", "hmgr": "Cade Dalton", "hpts": 98.8, "away": "G SPITTER", "amgr": "Grant Wright", "apts": 121.36, "margin": 22.56, "winner": "G SPITTER", "winmgr": "Grant Wright", "loser": "Cade's Eagles"}, {"year": "2025", "week": 4, "home": "Cole \"Brock That Body\" Dalton", "hmgr": "Jack Sevier", "hpts": 159.74, "away": "Brock That Body", "amgr": "Cole Dalton", "apts": 136.68, "margin": 23.06, "winner": "Cole \"Brock That Body\" Dalton", "winmgr": "Jack Sevier", "loser": "Brock That Body"}, {"year": "2025", "week": 6, "home": "Air Allen", "hmgr": "Dylan Northeim", "hpts": 115.1, "away": "Brock That Body", "amgr": "Cole Dalton", "apts": 91.96, "margin": 23.14, "winner": "Air Allen", "winmgr": "Dylan Northeim", "loser": "Brock That Body"}, {"year": "2025", "week": 5, "home": "Air Allen", "hmgr": "Dylan Northeim", "hpts": 154.84, "away": "De'Von Intervention", "amgr": "Jacob Thompson", "apts": 128.74, "margin": 26.1, "winner": "Air Allen", "winmgr": "Dylan Northeim", "loser": "De'Von Intervention"}, {"year": "2025", "week": 1, "home": "Cole \"Brock That Body\" Dalton", "hmgr": "Jack Sevier", "hpts": 126.72, "away": "Cade's Eagles", "amgr": "Cade Dalton", "apts": 99.98, "margin": 26.74, "winner": "Cole \"Brock That Body\" Dalton", "winmgr": "Jack Sevier", "loser": "Cade's Eagles"}, {"year": "2025", "week": 4, "home": "G SPITTER", "hmgr": "Grant Wright", "hpts": 84.58, "away": "Cade's Eagles", "amgr": "Cade Dalton", "apts": 113.1, "margin": 28.52, "winner": "Cade's Eagles", "winmgr": "Cade Dalton", "loser": "G SPITTER"}, {"year": "2025", "week": 2, "home": "Cole \"Brock That Body\" Dalton", "hmgr": "Jack Sevier", "hpts": 118.1, "away": "Get Komfy", "amgr": "Rylan Wilson", "apts": 89.28, "margin": 28.82, "winner": "Cole \"Brock That Body\" Dalton", "winmgr": "Jack Sevier", "loser": "Get Komfy"}, {"year": "2025", "week": 13, "home": "Brock That Body", "hmgr": "Cole Dalton", "hpts": 122.44, "away": "Air Allen", "amgr": "Dylan Northeim", "apts": 93.62, "margin": 28.82, "winner": "Brock That Body", "winmgr": "Cole Dalton", "loser": "Air Allen"}, {"year": "2025", "week": 7, "home": "Drake Dynasty", "hmgr": "Nico Dattilo", "hpts": 149.08, "away": "G SPITTER", "amgr": "Grant Wright", "apts": 119.96, "margin": 29.12, "winner": "Drake Dynasty", "winmgr": "Nico Dattilo", "loser": "G SPITTER"}, {"year": "2025", "week": 3, "home": "Brock That Body", "hmgr": "Cole Dalton", "hpts": 146.72, "away": "G SPITTER", "amgr": "Grant Wright", "apts": 117.22, "margin": 29.5, "winner": "Brock That Body", "winmgr": "Cole Dalton", "loser": "G SPITTER"}, {"year": "2025", "week": 1, "home": "Get Komfy", "hmgr": "Rylan Wilson", "hpts": 128.12, "away": "Brock That Body", "amgr": "Cole Dalton", "apts": 97.32, "margin": 30.8, "winner": "Get Komfy", "winmgr": "Rylan Wilson", "loser": "Brock That Body"}, {"year": "2025", "week": 1, "home": "Drake Dynasty", "hmgr": "Nico Dattilo", "hpts": 104.52, "away": "Air Allen", "amgr": "Dylan Northeim", "apts": 136.16, "margin": 31.64, "winner": "Air Allen", "winmgr": "Dylan Northeim", "loser": "Drake Dynasty"}, {"year": "2025", "week": 15, "home": "Cole \"Brock That Body\" Dalton", "hmgr": "Jack Sevier", "hpts": 104.24, "away": "Cade's Eagles", "amgr": "Cade Dalton", "apts": 137.12, "margin": 32.88, "winner": "Cade's Eagles", "winmgr": "Cade Dalton", "loser": "Cole \"Brock That Body\" Dalton"}, {"year": "2025", "week": 9, "home": "Drake Dynasty", "hmgr": "Nico Dattilo", "hpts": 149.86, "away": "Cade's Eagles", "amgr": "Cade Dalton", "apts": 116.54, "margin": 33.32, "winner": "Drake Dynasty", "winmgr": "Nico Dattilo", "loser": "Cade's Eagles"}, {"year": "2025", "week": 8, "home": "Cade's Eagles", "hmgr": "Cade Dalton", "hpts": 185.06, "away": "Cole \"Brock That Body\" Dalton", "amgr": "Jack Sevier", "apts": 150.78, "margin": 34.28, "winner": "Cade's Eagles", "winmgr": "Cade Dalton", "loser": "Cole \"Brock That Body\" Dalton"}, {"year": "2025", "week": 17, "home": "Cade's Eagles", "hmgr": "Cade Dalton", "hpts": 102.46, "away": "Get Komfy", "amgr": "Rylan Wilson", "apts": 137.42, "margin": 34.96, "winner": "Get Komfy", "winmgr": "Rylan Wilson", "loser": "Cade's Eagles"}, {"year": "2025", "week": 4, "home": "Drake Dynasty", "hmgr": "Nico Dattilo", "hpts": 145.42, "away": "De'Von Intervention", "amgr": "Jacob Thompson", "apts": 110.02, "margin": 35.4, "winner": "Drake Dynasty", "winmgr": "Nico Dattilo", "loser": "De'Von Intervention"}, {"year": "2025", "week": 17, "home": "Drake Dynasty", "hmgr": "Nico Dattilo", "hpts": 140.1, "away": "Brock That Body", "amgr": "Cole Dalton", "apts": 103.18, "margin": 36.92, "winner": "Drake Dynasty", "winmgr": "Nico Dattilo", "loser": "Brock That Body"}, {"year": "2025", "week": 3, "home": "De'Von Intervention", "hmgr": "Jacob Thompson", "hpts": 113.9, "away": "Cole \"Brock That Body\" Dalton", "amgr": "Jack Sevier", "apts": 76.32, "margin": 37.58, "winner": "De'Von Intervention", "winmgr": "Jacob Thompson", "loser": "Cole \"Brock That Body\" Dalton"}, {"year": "2025", "week": 10, "home": "G SPITTER", "hmgr": "Grant Wright", "hpts": 121.4, "away": "Brock That Body", "amgr": "Cole Dalton", "apts": 159, "margin": 37.6, "winner": "Brock That Body", "winmgr": "Cole Dalton", "loser": "G SPITTER"}, {"year": "2025", "week": 10, "home": "Cole \"Brock That Body\" Dalton", "hmgr": "Jack Sevier", "hpts": 116.78, "away": "De'Von Intervention", "amgr": "Jacob Thompson", "apts": 156.3, "margin": 39.52, "winner": "De'Von Intervention", "winmgr": "Jacob Thompson", "loser": "Cole \"Brock That Body\" Dalton"}, {"year": "2025", "week": 7, "home": "Cade's Eagles", "hmgr": "Cade Dalton", "hpts": 131.04, "away": "Brock That Body", "amgr": "Cole Dalton", "apts": 170.9, "margin": 39.86, "winner": "Brock That Body", "winmgr": "Cole Dalton", "loser": "Cade's Eagles"}, {"year": "2025", "week": 16, "home": "Cade's Eagles", "hmgr": "Cade Dalton", "hpts": 145.7, "away": "Cole \"Brock That Body\" Dalton", "amgr": "Jack Sevier", "apts": 105.62, "margin": 40.08, "winner": "Cade's Eagles", "winmgr": "Cade Dalton", "loser": "Cole \"Brock That Body\" Dalton"}, {"year": "2025", "week": 17, "home": "Cole \"Brock That Body\" Dalton", "hmgr": "Jack Sevier", "hpts": 103.18, "away": "G SPITTER", "amgr": "Grant Wright", "apts": 61.08, "margin": 42.1, "winner": "Cole \"Brock That Body\" Dalton", "winmgr": "Jack Sevier", "loser": "G SPITTER"}, {"year": "2025", "week": 12, "home": "Get Komfy", "hmgr": "Rylan Wilson", "hpts": 101.18, "away": "Cade's Eagles", "amgr": "Cade Dalton", "apts": 143.56, "margin": 42.38, "winner": "Cade's Eagles", "winmgr": "Cade Dalton", "loser": "Get Komfy"}, {"year": "2025", "week": 16, "home": "Drake Dynasty", "hmgr": "Nico Dattilo", "hpts": 133.9, "away": "De'Von Intervention", "amgr": "Jacob Thompson", "apts": 91.22, "margin": 42.68, "winner": "Drake Dynasty", "winmgr": "Nico Dattilo", "loser": "De'Von Intervention"}, {"year": "2025", "week": 2, "home": "Brock That Body", "hmgr": "Cole Dalton", "hpts": 147.04, "away": "De'Von Intervention", "amgr": "Jacob Thompson", "apts": 103.78, "margin": 43.26, "winner": "Brock That Body", "winmgr": "Cole Dalton", "loser": "De'Von Intervention"}, {"year": "2025", "week": 15, "home": "Drake Dynasty", "hmgr": "Nico Dattilo", "hpts": 183.2, "away": "Air Allen", "amgr": "Dylan Northeim", "apts": 138.62, "margin": 44.58, "winner": "Drake Dynasty", "winmgr": "Nico Dattilo", "loser": "Air Allen"}, {"year": "2025", "week": 10, "home": "Get Komfy", "hmgr": "Rylan Wilson", "hpts": 107.9, "away": "Drake Dynasty", "amgr": "Nico Dattilo", "apts": 156.94, "margin": 49.04, "winner": "Drake Dynasty", "winmgr": "Nico Dattilo", "loser": "Get Komfy"}, {"year": "2025", "week": 8, "home": "G SPITTER", "hmgr": "Grant Wright", "hpts": 85.52, "away": "De'Von Intervention", "amgr": "Jacob Thompson", "apts": 135.8, "margin": 50.28, "winner": "De'Von Intervention", "winmgr": "Jacob Thompson", "loser": "G SPITTER"}, {"year": "2025", "week": 14, "home": "Air Allen", "hmgr": "Dylan Northeim", "hpts": 146.94, "away": "Cole \"Brock That Body\" Dalton", "amgr": "Jack Sevier", "apts": 96.1, "margin": 50.84, "winner": "Air Allen", "winmgr": "Dylan Northeim", "loser": "Cole \"Brock That Body\" Dalton"}, {"year": "2025", "week": 7, "home": "Get Komfy", "hmgr": "Rylan Wilson", "hpts": 142.64, "away": "De'Von Intervention", "amgr": "Jacob Thompson", "apts": 89.84, "margin": 52.8, "winner": "Get Komfy", "winmgr": "Rylan Wilson", "loser": "De'Von Intervention"}, {"year": "2025", "week": 12, "home": "De'Von Intervention", "hmgr": "Jacob Thompson", "hpts": 141.26, "away": "Air Allen", "amgr": "Dylan Northeim", "apts": 88.22, "margin": 53.04, "winner": "De'Von Intervention", "winmgr": "Jacob Thompson", "loser": "Air Allen"}, {"year": "2025", "week": 8, "home": "Air Allen", "hmgr": "Dylan Northeim", "hpts": 90.22, "away": "Drake Dynasty", "amgr": "Nico Dattilo", "apts": 144.74, "margin": 54.52, "winner": "Drake Dynasty", "winmgr": "Nico Dattilo", "loser": "Air Allen"}, {"year": "2025", "week": 6, "home": "De'Von Intervention", "hmgr": "Jacob Thompson", "hpts": 163.16, "away": "Cade's Eagles", "amgr": "Cade Dalton", "apts": 101.42, "margin": 61.74, "winner": "De'Von Intervention", "winmgr": "Jacob Thompson", "loser": "Cade's Eagles"}, {"year": "2025", "week": 14, "home": "Brock That Body", "hmgr": "Cole Dalton", "hpts": 155.58, "away": "Cade's Eagles", "amgr": "Cade Dalton", "apts": 91.9, "margin": 63.68, "winner": "Brock That Body", "winmgr": "Cole Dalton", "loser": "Cade's Eagles"}, {"year": "2025", "week": 15, "home": "De'Von Intervention", "hmgr": "Jacob Thompson", "hpts": 175.96, "away": "G SPITTER", "amgr": "Grant Wright", "apts": 111.9, "margin": 64.06, "winner": "De'Von Intervention", "winmgr": "Jacob Thompson", "loser": "G SPITTER"}, {"year": "2025", "week": 9, "home": "De'Von Intervention", "hmgr": "Jacob Thompson", "hpts": 111.72, "away": "Brock That Body", "amgr": "Cole Dalton", "apts": 181.7, "margin": 69.98, "winner": "Brock That Body", "winmgr": "Cole Dalton", "loser": "De'Von Intervention"}, {"year": "2025", "week": 7, "home": "Cole \"Brock That Body\" Dalton", "hmgr": "Jack Sevier", "hpts": 94.14, "away": "Air Allen", "amgr": "Dylan Northeim", "apts": 169.98, "margin": 75.84, "winner": "Air Allen", "winmgr": "Dylan Northeim", "loser": "Cole \"Brock That Body\" Dalton"}, {"year": "2025", "week": 11, "home": "Air Allen", "hmgr": "Dylan Northeim", "hpts": 176.48, "away": "Get Komfy", "amgr": "Rylan Wilson", "apts": 99.84, "margin": 76.64, "winner": "Air Allen", "winmgr": "Dylan Northeim", "loser": "Get Komfy"}, {"year": "2025", "week": 13, "home": "Get Komfy", "hmgr": "Rylan Wilson", "hpts": 162.44, "away": "G SPITTER", "amgr": "Grant Wright", "apts": 85.14, "margin": 77.3, "winner": "Get Komfy", "winmgr": "Rylan Wilson", "loser": "G SPITTER"}, {"year": "2025", "week": 6, "home": "Drake Dynasty", "hmgr": "Nico Dattilo", "hpts": 177.54, "away": "Cole \"Brock That Body\" Dalton", "amgr": "Jack Sevier", "apts": 67.2, "margin": 110.34, "winner": "Drake Dynasty", "winmgr": "Nico Dattilo", "loser": "Cole \"Brock That Body\" Dalton"}], "top10_by_position": {"QB": [{"year": "2025", "week": 11, "team": "Air Allen", "mgr": "Dylan Northeim", "player": "Josh Allen", "pos": "QB", "pts": 42.68, "started": true}, {"year": "2025", "week": 1, "team": "Air Allen", "mgr": "Dylan Northeim", "player": "Josh Allen", "pos": "QB", "pts": 38.76, "started": true}, {"year": "2025", "week": 14, "team": "Air Allen", "mgr": "Dylan Northeim", "player": "Josh Allen", "pos": "QB", "pts": 37.84, "started": true}, {"year": "2025", "week": 6, "team": "Get Komfy", "mgr": "Rylan Wilson", "player": "Patrick Mahomes", "pos": "QB", "pts": 31.48, "started": true}, {"year": "2025", "week": 12, "team": "Cade's Eagles", "mgr": "Cade Dalton", "player": "Jalen Hurts", "pos": "QB", "pts": 30.86, "started": true}, {"year": "2025", "week": 16, "team": "Get Komfy", "mgr": "Rylan Wilson", "player": "Justin Herbert", "pos": "QB", "pts": 30.2, "started": true}, {"year": "2025", "week": 13, "team": "Get Komfy", "mgr": "Rylan Wilson", "player": "Patrick Mahomes", "pos": "QB", "pts": 29.44, "started": true}, {"year": "2025", "week": 1, "team": "G SPITTER", "mgr": "Grant Wright", "player": "Lamar Jackson", "pos": "QB", "pts": 29.36, "started": true}, {"year": "2025", "week": 3, "team": "Brock That Body", "mgr": "Cole Dalton", "player": "Caleb Williams", "pos": "QB", "pts": 29.12, "started": true}, {"year": "2025", "week": 3, "team": "Cade's Eagles", "mgr": "Cade Dalton", "player": "Jalen Hurts", "pos": "QB", "pts": 29.04, "started": true}], "RB": [{"year": "2025", "week": 12, "team": "Brock That Body", "mgr": "Cole Dalton", "player": "Jahmyr Gibbs", "pos": "RB", "pts": 55.4, "started": true}, {"year": "2025", "week": 10, "team": "Cade's Eagles", "mgr": "Cade Dalton", "player": "Jonathan Taylor", "pos": "RB", "pts": 49.6, "started": true}, {"year": "2025", "week": 17, "team": "De'Von Intervention", "mgr": "Jacob Thompson", "player": "Derrick Henry", "pos": "RB", "pts": 45.6, "started": true}, {"year": "2025", "week": 10, "team": "De'Von Intervention", "mgr": "Jacob Thompson", "player": "De'Von Achane", "pos": "RB", "pts": 40.5, "started": true}, {"year": "2025", "week": 17, "team": "Get Komfy", "mgr": "Rylan Wilson", "player": "Bijan Robinson", "pos": "RB", "pts": 39.9, "started": true}, {"year": "2025", "week": 7, "team": "Air Allen", "mgr": "Dylan Northeim", "player": "Christian McCaffrey", "pos": "RB", "pts": 39.1, "started": true}, {"year": "2025", "week": 10, "team": "Brock That Body", "mgr": "Cole Dalton", "player": "Jahmyr Gibbs", "pos": "RB", "pts": 38.2, "started": true}, {"year": "2025", "week": 8, "team": "Cade's Eagles", "mgr": "Cade Dalton", "player": "Jonathan Taylor", "pos": "RB", "pts": 37.4, "started": true}, {"year": "2025", "week": 14, "team": "Brock That Body", "mgr": "Cole Dalton", "player": "Jahmyr Gibbs", "pos": "RB", "pts": 37, "started": true}, {"year": "2025", "week": 7, "team": "Brock That Body", "mgr": "Cole Dalton", "player": "Jahmyr Gibbs", "pos": "RB", "pts": 36.8, "started": true}], "WR": [{"year": "2025", "week": 16, "team": "Brock That Body", "mgr": "Cole Dalton", "player": "Puka Nacua", "pos": "WR", "pts": 46.5, "started": true}, {"year": "2025", "week": 15, "team": "De'Von Intervention", "mgr": "Jacob Thompson", "player": "Amon-Ra St. Brown", "pos": "WR", "pts": 41.4, "started": true}, {"year": "2025", "week": 2, "team": "Air Allen", "mgr": "Dylan Northeim", "player": "Amon-Ra St. Brown", "pos": "WR", "pts": 39.2, "started": true}, {"year": "2025", "week": 9, "team": "Drake Dynasty", "mgr": "Nico Dattilo", "player": "Drake London", "pos": "WR", "pts": 38.8, "started": true}, {"year": "2025", "week": 7, "team": "Brock That Body", "mgr": "Cole Dalton", "player": "Ja'Marr Chase", "pos": "WR", "pts": 38.1, "started": true}, {"year": "2025", "week": 2, "team": "G SPITTER", "mgr": "Grant Wright", "player": "Malik Nabers", "pos": "WR", "pts": 37.7, "started": true}, {"year": "2025", "week": 14, "team": "De'Von Intervention", "mgr": "Jacob Thompson", "player": "Michael Wilson", "pos": "WR", "pts": 37.2, "started": true}, {"year": "2025", "week": 12, "team": "Drake Dynasty", "mgr": "Nico Dattilo", "player": "Jaxon Smith-Njigba", "pos": "WR", "pts": 37.1, "started": true}, {"year": "2025", "week": 16, "team": "Get Komfy", "mgr": "Rylan Wilson", "player": "Chris Olave", "pos": "WR", "pts": 36.8, "started": true}, {"year": "2025", "week": 2, "team": "Drake Dynasty", "mgr": "Nico Dattilo", "player": "Ja'Marr Chase", "pos": "WR", "pts": 36.5, "started": true}], "TE": [{"year": "2025", "week": 15, "team": "Drake Dynasty", "mgr": "Nico Dattilo", "player": "Kyle Pitts Sr.", "pos": "TE", "pts": 45.6, "started": true}, {"year": "2025", "week": 9, "team": "Brock That Body", "mgr": "Cole Dalton", "player": "Brock Bowers", "pos": "TE", "pts": 43.3, "started": true}, {"year": "2025", "week": 15, "team": "Drake Dynasty", "mgr": "Nico Dattilo", "player": "Trey McBride", "pos": "TE", "pts": 37.4, "started": true}, {"year": "2025", "week": 8, "team": "Get Komfy", "mgr": "Rylan Wilson", "player": "Tucker Kraft", "pos": "TE", "pts": 33.3, "started": true}, {"year": "2025", "week": 7, "team": "Drake Dynasty", "mgr": "Nico Dattilo", "player": "Trey McBride", "pos": "TE", "pts": 29.4, "started": true}, {"year": "2025", "week": 10, "team": "Drake Dynasty", "mgr": "Nico Dattilo", "player": "Trey McBride", "pos": "TE", "pts": 27.7, "started": true}, {"year": "2025", "week": 11, "team": "Drake Dynasty", "mgr": "Nico Dattilo", "player": "Trey McBride", "pos": "TE", "pts": 27.5, "started": true}, {"year": "2025", "week": 14, "team": "Air Allen", "mgr": "Dylan Northeim", "player": "Harold Fannin Jr.", "pos": "TE", "pts": 25.4, "started": true}, {"year": "2025", "week": 15, "team": "Cade's Eagles", "mgr": "Cade Dalton", "player": "Dallas Goedert", "pos": "TE", "pts": 25, "started": true}, {"year": "2025", "week": 11, "team": "Air Allen", "mgr": "Dylan Northeim", "player": "George Kittle", "pos": "TE", "pts": 24.7, "started": true}], "K": [{"year": "2025", "week": 14, "team": "Air Allen", "mgr": "Dylan Northeim", "player": "Brandon Aubrey", "pos": "K", "pts": 24, "started": true}, {"year": "2025", "week": 15, "team": "De'Von Intervention", "mgr": "Jacob Thompson", "player": "Jason Myers", "pos": "K", "pts": 24, "started": true}, {"year": "2025", "week": 2, "team": "Air Allen", "mgr": "Dylan Northeim", "player": "Brandon Aubrey", "pos": "K", "pts": 23, "started": true}, {"year": "2025", "week": 8, "team": "Cole \"Brock That Body\" Dalton", "mgr": "Jack Sevier", "player": "Chris Boswell", "pos": "K", "pts": 20, "started": true}, {"year": "2025", "week": 14, "team": "Get Komfy", "mgr": "Rylan Wilson", "player": "Cameron Dicker", "pos": "K", "pts": 20, "started": true}, {"year": "2025", "week": 13, "team": "De'Von Intervention", "mgr": "Jacob Thompson", "player": "Jason Myers", "pos": "K", "pts": 19, "started": true}, {"year": "2025", "week": 6, "team": "Drake Dynasty", "mgr": "Nico Dattilo", "player": "Eddy Pineiro", "pos": "K", "pts": 18, "started": true}, {"year": "2025", "week": 7, "team": "Air Allen", "mgr": "Dylan Northeim", "player": "Brandon Aubrey", "pos": "K", "pts": 18, "started": true}, {"year": "2025", "week": 12, "team": "G SPITTER", "mgr": "Grant Wright", "player": "Andy Borregales", "pos": "K", "pts": 18, "started": true}, {"year": "2025", "week": 6, "team": "Get Komfy", "mgr": "Rylan Wilson", "player": "Cameron Dicker", "pos": "K", "pts": 17, "started": true}], "D/ST": [{"year": "2025", "week": 3, "team": "G SPITTER", "mgr": "Grant Wright", "player": "Vikings D/ST", "pos": "D/ST", "pts": 32, "started": true}, {"year": "2025", "week": 13, "team": "Get Komfy", "mgr": "Rylan Wilson", "player": "Seahawks D/ST", "pos": "D/ST", "pts": 28, "started": true}, {"year": "2025", "week": 8, "team": "Cade's Eagles", "mgr": "Cade Dalton", "player": "Buccaneers D/ST", "pos": "D/ST", "pts": 25, "started": true}, {"year": "2025", "week": 11, "team": "Cade's Eagles", "mgr": "Cade Dalton", "player": "Steelers D/ST", "pos": "D/ST", "pts": 22, "started": true}, {"year": "2025", "week": 10, "team": "Get Komfy", "mgr": "Rylan Wilson", "player": "Seahawks D/ST", "pos": "D/ST", "pts": 21, "started": true}, {"year": "2025", "week": 4, "team": "Brock That Body", "mgr": "Cole Dalton", "player": "Lions D/ST", "pos": "D/ST", "pts": 20, "started": true}, {"year": "2025", "week": 7, "team": "Drake Dynasty", "mgr": "Nico Dattilo", "player": "Patriots D/ST", "pos": "D/ST", "pts": 20, "started": true}, {"year": "2025", "week": 12, "team": "Cole \"Brock That Body\" Dalton", "mgr": "Jack Sevier", "player": "Rams D/ST", "pos": "D/ST", "pts": 20, "started": true}, {"year": "2025", "week": 14, "team": "Get Komfy", "mgr": "Rylan Wilson", "player": "Seahawks D/ST", "pos": "D/ST", "pts": 20, "started": true}, {"year": "2025", "week": 16, "team": "Cade's Eagles", "mgr": "Cade Dalton", "player": "Saints D/ST", "pos": "D/ST", "pts": 19, "started": true}]}}, "2024": {"top_performances": [{"year": "2024", "week": 10, "team": "Nacua Matata", "mgr": "Nico Dattilo", "player": "Ja'Marr Chase", "pos": "WR", "pts": 55.4, "started": true}, {"year": "2024", "week": 14, "team": "I agree with Harrison Butker", "mgr": "Alex Fankhauser", "player": "Josh Allen", "pos": "QB", "pts": 51.88, "started": true}, {"year": "2024", "week": 12, "team": "Federal Burrow of Investigation", "mgr": "Jack Sevier", "player": "Saquon Barkley", "pos": "RB", "pts": 46.2, "started": true}, {"year": "2024", "week": 14, "team": "Nacua Matata", "mgr": "Nico Dattilo", "player": "Ja'Marr Chase", "pos": "WR", "pts": 45.1, "started": true}, {"year": "2024", "week": 2, "team": "Game is Game", "mgr": "Jacob Thompson", "player": "Alvin Kamara", "pos": "RB", "pts": 44, "started": true}, {"year": "2024", "week": 15, "team": "The Princess McBride", "mgr": "Cole Dalton", "player": "Davante Adams", "pos": "WR", "pts": 42.8, "started": true}, {"year": "2024", "week": 14, "team": "Nacua Matata", "mgr": "Nico Dattilo", "player": "Puka Nacua", "pos": "WR", "pts": 41.8, "started": true}, {"year": "2024", "week": 11, "team": "The Princess McBride", "mgr": "Cole Dalton", "player": "Taysom Hill", "pos": "TE", "pts": 41.52, "started": true}, {"year": "2024", "week": 5, "team": "Nacua Matata", "mgr": "Nico Dattilo", "player": "Ja'Marr Chase", "pos": "WR", "pts": 41.3, "started": true}, {"year": "2024", "week": 15, "team": "I agree with Harrison Butker", "mgr": "Alex Fankhauser", "player": "Josh Allen", "pos": "QB", "pts": 41.28, "started": true}, {"year": "2024", "week": 17, "team": "Every McQueen needs a King", "mgr": "Dillon Deason", "player": "Tee Higgins", "pos": "WR", "pts": 40.1, "started": true}, {"year": "2024", "week": 8, "team": "Game is Game", "mgr": "Jacob Thompson", "player": "CeeDee Lamb", "pos": "WR", "pts": 39.6, "started": true}, {"year": "2024", "week": 11, "team": "Tucker Punch", "mgr": "Dylan Northeim", "player": "Amon-Ra St. Brown", "pos": "WR", "pts": 38.7, "started": true}, {"year": "2024", "week": 15, "team": "Tucker Punch", "mgr": "Dylan Northeim", "player": "Amon-Ra St. Brown", "pos": "WR", "pts": 37.3, "started": true}, {"year": "2024", "week": 17, "team": "Federal Burrow of Investigation", "mgr": "Jack Sevier", "player": "Joe Burrow", "pos": "QB", "pts": 36.98, "started": true}, {"year": "2024", "week": 15, "team": "Every McQueen needs a King", "mgr": "Dillon Deason", "player": "Mike Evans", "pos": "WR", "pts": 36.9, "started": true}, {"year": "2024", "week": 16, "team": "I agree with Harrison Butker", "mgr": "Alex Fankhauser", "player": "Justin Jefferson", "pos": "WR", "pts": 36.4, "started": true}, {"year": "2024", "week": 15, "team": "Get Krafty", "mgr": "Rylan Wilson", "player": "Lamar Jackson", "pos": "QB", "pts": 36.1, "started": true}, {"year": "2024", "week": 17, "team": "Da Dak Breakers", "mgr": "Puneet Nunsavathu", "player": "Malik Nabers", "pos": "WR", "pts": 36.1, "started": true}, {"year": "2024", "week": 4, "team": "Every McQueen needs a King", "mgr": "Dillon Deason", "player": "Derrick Henry", "pos": "RB", "pts": 35.9, "started": true}, {"year": "2024", "week": 6, "team": "Tucker Punch", "mgr": "Dylan Northeim", "player": "Chris Godwin", "pos": "WR", "pts": 35.5, "started": true}, {"year": "2024", "week": 11, "team": "Game is Game", "mgr": "Jacob Thompson", "player": "Joe Mixon", "pos": "RB", "pts": 35.3, "started": true}, {"year": "2024", "week": 8, "team": "Olave Garden", "mgr": "Cade Dalton", "player": "Jalen Hurts", "pos": "QB", "pts": 35.14, "started": true}, {"year": "2024", "week": 11, "team": "Nacua Matata", "mgr": "Nico Dattilo", "player": "Jared Goff", "pos": "QB", "pts": 34.58, "started": true}, {"year": "2024", "week": 14, "team": "Nacua Matata", "mgr": "Nico Dattilo", "player": "Sam Darnold", "pos": "QB", "pts": 34.58, "started": true}, {"year": "2024", "week": 17, "team": "Tucker Punch", "mgr": "Dylan Northeim", "player": "Baker Mayfield", "pos": "QB", "pts": 34.56, "started": true}, {"year": "2024", "week": 7, "team": "Get Krafty", "mgr": "Rylan Wilson", "player": "Lamar Jackson", "pos": "QB", "pts": 34.44, "started": true}, {"year": "2024", "week": 16, "team": "The Princess McBride", "mgr": "Cole Dalton", "player": "Jayden Daniels", "pos": "QB", "pts": 34.42, "started": true}, {"year": "2024", "week": 5, "team": "Olave Garden", "mgr": "Cade Dalton", "player": "Kirk Cousins", "pos": "QB", "pts": 34.36, "started": true}, {"year": "2024", "week": 11, "team": "Federal Burrow of Investigation", "mgr": "Jack Sevier", "player": "Saquon Barkley", "pos": "RB", "pts": 33.8, "started": true}, {"year": "2024", "week": 5, "team": "Tucker Punch", "mgr": "Dylan Northeim", "player": "Joe Burrow", "pos": "QB", "pts": 33.78, "started": true}, {"year": "2024", "week": 10, "team": "Federal Burrow of Investigation", "mgr": "Jack Sevier", "player": "Joe Burrow", "pos": "QB", "pts": 33.72, "started": true}, {"year": "2024", "week": 3, "team": "Federal Burrow of Investigation", "mgr": "Jack Sevier", "player": "Saquon Barkley", "pos": "RB", "pts": 33.6, "started": true}, {"year": "2024", "week": 4, "team": "Game is Game", "mgr": "Jacob Thompson", "player": "Kenneth Walker III", "pos": "RB", "pts": 33.6, "started": true}, {"year": "2024", "week": 5, "team": "Get Krafty", "mgr": "Rylan Wilson", "player": "Lamar Jackson", "pos": "QB", "pts": 33.42, "started": true}, {"year": "2024", "week": 5, "team": "Nacua Matata", "mgr": "Nico Dattilo", "player": "Drake London", "pos": "WR", "pts": 33.4, "started": true}, {"year": "2024", "week": 1, "team": "Federal Burrow of Investigation", "mgr": "Jack Sevier", "player": "Saquon Barkley", "pos": "RB", "pts": 33.2, "started": true}, {"year": "2024", "week": 4, "team": "Tucker Punch", "mgr": "Dylan Northeim", "player": "Nico Collins", "pos": "WR", "pts": 33.1, "started": true}, {"year": "2024", "week": 9, "team": "Federal Burrow of Investigation", "mgr": "Jack Sevier", "player": "Saquon Barkley", "pos": "RB", "pts": 32.9, "started": true}, {"year": "2024", "week": 10, "team": "Get Krafty", "mgr": "Rylan Wilson", "player": "Lamar Jackson", "pos": "QB", "pts": 32.9, "started": true}, {"year": "2024", "week": 15, "team": "Game is Game", "mgr": "Jacob Thompson", "player": "Brian Thomas Jr.", "pos": "WR", "pts": 32.5, "started": true}, {"year": "2024", "week": 16, "team": "Tucker Punch", "mgr": "Dylan Northeim", "player": "Chuba Hubbard", "pos": "RB", "pts": 32.5, "started": true}, {"year": "2024", "week": 14, "team": "I agree with Harrison Butker", "mgr": "Alex Fankhauser", "player": "Justin Jefferson", "pos": "WR", "pts": 32.2, "started": true}, {"year": "2024", "week": 9, "team": "Get Krafty", "mgr": "Rylan Wilson", "player": "De'Von Achane", "pos": "RB", "pts": 32.1, "started": true}, {"year": "2024", "week": 1, "team": "Every McQueen needs a King", "mgr": "Dillon Deason", "player": "Cooper Kupp", "pos": "WR", "pts": 32, "started": true}, {"year": "2024", "week": 7, "team": "I agree with Harrison Butker", "mgr": "Alex Fankhauser", "player": "Jahmyr Gibbs", "pos": "RB", "pts": 32, "started": true}, {"year": "2024", "week": 17, "team": "The Princess McBride", "mgr": "Cole Dalton", "player": "Jayden Daniels", "pos": "QB", "pts": 31.78, "started": true}, {"year": "2024", "week": 3, "team": "Da Dak Breakers", "mgr": "Puneet Nunsavathu", "player": "Kyren Williams", "pos": "RB", "pts": 31.6, "started": true}, {"year": "2024", "week": 11, "team": "Game is Game", "mgr": "Jacob Thompson", "player": "Brock Bowers", "pos": "TE", "pts": 31.3, "started": true}, {"year": "2024", "week": 1, "team": "I agree with Harrison Butker", "mgr": "Alex Fankhauser", "player": "Josh Allen", "pos": "QB", "pts": 31.18, "started": true}], "best_by_position": {"QB": {"year": "2024", "week": 14, "team": "I agree with Harrison Butker", "mgr": "Alex Fankhauser", "player": "Josh Allen", "pos": "QB", "pts": 51.88, "started": true}, "RB": {"year": "2024", "week": 12, "team": "Federal Burrow of Investigation", "mgr": "Jack Sevier", "player": "Saquon Barkley", "pos": "RB", "pts": 46.2, "started": true}, "WR": {"year": "2024", "week": 10, "team": "Nacua Matata", "mgr": "Nico Dattilo", "player": "Ja'Marr Chase", "pos": "WR", "pts": 55.4, "started": true}, "TE": {"year": "2024", "week": 11, "team": "The Princess McBride", "mgr": "Cole Dalton", "player": "Taysom Hill", "pos": "TE", "pts": 41.52, "started": true}, "K": {"year": "2024", "week": 1, "team": "Every McQueen needs a King", "mgr": "Dillon Deason", "player": "Jake Moody", "pos": "K", "pts": 26, "started": true}, "D/ST": {"year": "2024", "week": 1, "team": "Game is Game", "mgr": "Jacob Thompson", "player": "Bears D/ST", "pos": "D/ST", "pts": 26, "started": true}}, "worst_starts": [{"year": "2024", "week": 15, "team": "Every McQueen needs a King", "mgr": "Dillon Deason", "player": "Lions D/ST", "pos": "D/ST", "pts": -12, "started": true}, {"year": "2024", "week": 5, "team": "Da Dak Breakers", "mgr": "Puneet Nunsavathu", "player": "Panthers D/ST", "pos": "D/ST", "pts": -5, "started": true}, {"year": "2024", "week": 7, "team": "Tucker Punch", "mgr": "Dylan Northeim", "player": "Jets D/ST", "pos": "D/ST", "pts": -5, "started": true}, {"year": "2024", "week": 3, "team": "Every McQueen needs a King", "mgr": "Dillon Deason", "player": "Raiders D/ST", "pos": "D/ST", "pts": -4, "started": true}, {"year": "2024", "week": 13, "team": "Da Dak Breakers", "mgr": "Puneet Nunsavathu", "player": "Titans D/ST", "pos": "D/ST", "pts": -4, "started": true}, {"year": "2024", "week": 14, "team": "Olave Garden", "mgr": "Cade Dalton", "player": "Cardinals D/ST", "pos": "D/ST", "pts": -4, "started": true}, {"year": "2024", "week": 15, "team": "Get Krafty", "mgr": "Rylan Wilson", "player": "Chargers D/ST", "pos": "D/ST", "pts": -4, "started": true}, {"year": "2024", "week": 17, "team": "The Princess McBride", "mgr": "Cole Dalton", "player": "Colts D/ST", "pos": "D/ST", "pts": -4, "started": true}, {"year": "2024", "week": 4, "team": "Nacua Matata", "mgr": "Nico Dattilo", "player": "Bills D/ST", "pos": "D/ST", "pts": -3, "started": true}, {"year": "2024", "week": 17, "team": "I agree with Harrison Butker", "mgr": "Alex Fankhauser", "player": "Jets D/ST", "pos": "D/ST", "pts": -3, "started": true}, {"year": "2024", "week": 17, "team": "Da Dak Breakers", "mgr": "Puneet Nunsavathu", "player": "Steelers D/ST", "pos": "D/ST", "pts": -2, "started": true}, {"year": "2024", "week": 2, "team": "Federal Burrow of Investigation", "mgr": "Jack Sevier", "player": "Cowboys D/ST", "pos": "D/ST", "pts": -1, "started": true}, {"year": "2024", "week": 10, "team": "I agree with Harrison Butker", "mgr": "Alex Fankhauser", "player": "Falcons D/ST", "pos": "D/ST", "pts": -1, "started": true}, {"year": "2024", "week": 16, "team": "Olave Garden", "mgr": "Cade Dalton", "player": "Cardinals D/ST", "pos": "D/ST", "pts": -1, "started": true}, {"year": "2024", "week": 14, "team": "Every McQueen needs a King", "mgr": "Dillon Deason", "player": "Jonathon Brooks", "pos": "RB", "pts": -0.3, "started": true}, {"year": "2024", "week": 1, "team": "Nacua Matata", "mgr": "Nico Dattilo", "player": "Jaguars D/ST", "pos": "D/ST", "pts": 0, "started": true}, {"year": "2024", "week": 3, "team": "Tucker Punch", "mgr": "Dylan Northeim", "player": "Jake Elliott", "pos": "K", "pts": 0, "started": true}, {"year": "2024", "week": 3, "team": "Nacua Matata", "mgr": "Nico Dattilo", "player": "Mark Andrews", "pos": "TE", "pts": 0, "started": true}, {"year": "2024", "week": 3, "team": "Da Dak Breakers", "mgr": "Puneet Nunsavathu", "player": "Ka'imi Fairbairn", "pos": "K", "pts": 0, "started": true}, {"year": "2024", "week": 3, "team": "Federal Burrow of Investigation", "mgr": "Jack Sevier", "player": "Rashid Shaheed", "pos": "WR", "pts": 0, "started": true}, {"year": "2024", "week": 4, "team": "I agree with Harrison Butker", "mgr": "Alex Fankhauser", "player": "Rashee Rice", "pos": "WR", "pts": 0, "started": true}, {"year": "2024", "week": 4, "team": "I agree with Harrison Butker", "mgr": "Alex Fankhauser", "player": "Kyle Pitts", "pos": "TE", "pts": 0, "started": true}, {"year": "2024", "week": 6, "team": "Get Krafty", "mgr": "Rylan Wilson", "player": "Marvin Harrison Jr.", "pos": "WR", "pts": 0, "started": true}, {"year": "2024", "week": 6, "team": "I agree with Harrison Butker", "mgr": "Alex Fankhauser", "player": "Patriots D/ST", "pos": "D/ST", "pts": 0, "started": true}, {"year": "2024", "week": 6, "team": "Nacua Matata", "mgr": "Nico Dattilo", "player": "Mike Gesicki", "pos": "TE", "pts": 0, "started": true}], "top_season_scorers": [{"player": "Lamar Jackson", "pts": 407.4, "team": "Get Krafty", "mgr": "Rylan Wilson", "pos": "QB"}, {"player": "Josh Allen", "pts": 379.04, "team": "I agree with Harrison Butker", "mgr": "Alex Fankhauser", "pos": "QB"}, {"player": "Ja'Marr Chase", "pts": 377.4, "team": "Nacua Matata", "mgr": "Nico Dattilo", "pos": "WR"}, {"player": "Joe Burrow", "pts": 359.84, "team": "Federal Burrow of Investigation", "mgr": "Jack Sevier", "pos": "QB"}, {"player": "Saquon Barkley", "pts": 355.3, "team": "Federal Burrow of Investigation", "mgr": "Jack Sevier", "pos": "RB"}, {"player": "Jahmyr Gibbs", "pts": 316.9, "team": "I agree with Harrison Butker", "mgr": "Alex Fankhauser", "pos": "RB"}, {"player": "Bijan Robinson", "pts": 310.4, "team": "Every McQueen needs a King", "mgr": "Dillon Deason", "pos": "RB"}, {"player": "Justin Jefferson", "pts": 309.08, "team": "I agree with Harrison Butker", "mgr": "Alex Fankhauser", "pos": "WR"}, {"player": "Derrick Henry", "pts": 306.3, "team": "Every McQueen needs a King", "mgr": "Dillon Deason", "pos": "RB"}, {"player": "Amon-Ra St. Brown", "pts": 302.48, "team": "Tucker Punch", "mgr": "Dylan Northeim", "pos": "WR"}, {"player": "Jalen Hurts", "pts": 293.26, "team": "Olave Garden", "mgr": "Cade Dalton", "pos": "QB"}, {"player": "Jayden Daniels", "pts": 281.94, "team": "The Princess McBride", "mgr": "Cole Dalton", "pos": "QB"}, {"player": "De'Von Achane", "pts": 281.8, "team": "Get Krafty", "mgr": "Rylan Wilson", "pos": "RB"}, {"player": "Josh Jacobs", "pts": 281.5, "team": "I agree with Harrison Butker", "mgr": "Alex Fankhauser", "pos": "RB"}, {"player": "Kyren Williams", "pts": 272.1, "team": "Da Dak Breakers", "mgr": "Puneet Nunsavathu", "pos": "RB"}, {"player": "Alvin Kamara", "pts": 265.3, "team": "Game is Game", "mgr": "Jacob Thompson", "pos": "RB"}, {"player": "CeeDee Lamb", "pts": 263.4, "team": "Game is Game", "mgr": "Jacob Thompson", "pos": "WR"}, {"player": "Garrett Wilson", "pts": 242.8, "team": "Federal Burrow of Investigation", "mgr": "Jack Sevier", "pos": "WR"}, {"player": "Drake London", "pts": 240.1, "team": "The Princess McBride", "mgr": "Cole Dalton", "pos": "WR"}, {"player": "Joe Mixon", "pts": 236.7, "team": "Game is Game", "mgr": "Jacob Thompson", "pos": "RB"}, {"player": "James Conner", "pts": 236.6, "team": "The Princess McBride", "mgr": "Cole Dalton", "pos": "RB"}, {"player": "George Kittle", "pts": 231.9, "team": "Da Dak Breakers", "mgr": "Puneet Nunsavathu", "pos": "TE"}, {"player": "James Cook", "pts": 231.6, "team": "Olave Garden", "mgr": "Cade Dalton", "pos": "RB"}, {"player": "Trey McBride", "pts": 230.3, "team": "The Princess McBride", "mgr": "Cole Dalton", "pos": "TE"}, {"player": "Aaron Jones", "pts": 229.1, "team": "Nacua Matata", "mgr": "Nico Dattilo", "pos": "RB"}, {"player": "Breece Hall", "pts": 222.7, "team": "Da Dak Breakers", "mgr": "Puneet Nunsavathu", "pos": "RB"}, {"player": "Brock Bowers", "pts": 212.2, "team": "Game is Game", "mgr": "Jacob Thompson", "pos": "TE"}, {"player": "Puka Nacua", "pts": 206.6, "team": "Nacua Matata", "mgr": "Nico Dattilo", "pos": "WR"}, {"player": "Mike Evans", "pts": 206.2, "team": "Every McQueen needs a King", "mgr": "Dillon Deason", "pos": "WR"}, {"player": "DJ Moore", "pts": 205.1, "team": "I agree with Harrison Butker", "mgr": "Alex Fankhauser", "pos": "WR"}], "highest_team_week": {"year": "2024", "week": 17, "team": "Every McQueen needs a King", "mgr": "Dillon Deason", "pts": 192.9}, "lowest_team_week": {"year": "2024", "week": 7, "team": "The Princess McBride", "mgr": "Cole Dalton", "pts": 61.74}, "highest_pa_week": {"team": "Nacua Matata", "mgr": "Nico Dattilo", "week": 17, "pa": 192.9, "opp": "Every McQueen needs a King"}, "lowest_pa_week": {"team": "Da Dak Breakers", "mgr": "Puneet Nunsavathu", "week": 7, "pa": 61.74, "opp": "The Princess McBride"}, "pa_summary": [{"team": "Da Dak Breakers", "mgr": "Puneet Nunsavathu", "pa": 1853.8}, {"team": "Tucker Punch", "mgr": "Dylan Northeim", "pa": 1937.84}, {"team": "I agree with Harrison Butker", "mgr": "Alex Fankhauser", "pa": 1946.46}, {"team": "Get Krafty", "mgr": "Rylan Wilson", "pa": 1962.46}, {"team": "Game is Game", "mgr": "Jacob Thompson", "pa": 1973.14}, {"team": "The Princess McBride", "mgr": "Cole Dalton", "pa": 2055.64}, {"team": "Olave Garden", "mgr": "Cade Dalton", "pa": 2114.54}, {"team": "Every McQueen needs a King", "mgr": "Dillon Deason", "pa": 2118.48}, {"team": "Federal Burrow of Investigation", "mgr": "Jack Sevier", "pa": 2124.84}, {"team": "Nacua Matata", "mgr": "Nico Dattilo", "pa": 2147.2}], "closest": {"year": "2024", "week": 12, "home": "Get Krafty", "hmgr": "Rylan Wilson", "hpts": 100.18, "away": "Tucker Punch", "amgr": "Dylan Northeim", "apts": 100.16, "margin": 0.02, "winner": "Get Krafty", "winmgr": "Rylan Wilson", "loser": "Tucker Punch"}, "biggest_blowout": {"year": "2024", "week": 14, "home": "I agree with Harrison Butker", "hmgr": "Alex Fankhauser", "hpts": 186.48, "away": "Get Krafty", "amgr": "Rylan Wilson", "apts": 93.66, "margin": 92.82, "winner": "I agree with Harrison Butker", "winmgr": "Alex Fankhauser", "loser": "Get Krafty"}, "all_margins": [{"year": "2024", "week": 12, "home": "Get Krafty", "hmgr": "Rylan Wilson", "hpts": 100.18, "away": "Tucker Punch", "amgr": "Dylan Northeim", "apts": 100.16, "margin": 0.02, "winner": "Get Krafty", "winmgr": "Rylan Wilson", "loser": "Tucker Punch"}, {"year": "2024", "week": 11, "home": "Tucker Punch", "hmgr": "Dylan Northeim", "hpts": 126.98, "away": "The Princess McBride", "amgr": "Cole Dalton", "apts": 126.56, "margin": 0.42, "winner": "Tucker Punch", "winmgr": "Dylan Northeim", "loser": "The Princess McBride"}, {"year": "2024", "week": 16, "home": "Da Dak Breakers", "hmgr": "Puneet Nunsavathu", "hpts": 142.84, "away": "Game is Game", "amgr": "Jacob Thompson", "apts": 143.28, "margin": 0.44, "winner": "Game is Game", "winmgr": "Jacob Thompson", "loser": "Da Dak Breakers"}, {"year": "2024", "week": 8, "home": "Olave Garden", "hmgr": "Cade Dalton", "hpts": 153.26, "away": "Get Krafty", "amgr": "Rylan Wilson", "apts": 151.06, "margin": 2.2, "winner": "Olave Garden", "winmgr": "Cade Dalton", "loser": "Get Krafty"}, {"year": "2024", "week": 5, "home": "I agree with Harrison Butker", "hmgr": "Alex Fankhauser", "hpts": 112.04, "away": "Olave Garden", "amgr": "Cade Dalton", "apts": 115.76, "margin": 3.72, "winner": "Olave Garden", "winmgr": "Cade Dalton", "loser": "I agree with Harrison Butker"}, {"year": "2024", "week": 1, "home": "Federal Burrow of Investigation", "hmgr": "Jack Sevier", "hpts": 134.76, "away": "Every McQueen needs a King", "amgr": "Dillon Deason", "apts": 129.8, "margin": 4.96, "winner": "Federal Burrow of Investigation", "winmgr": "Jack Sevier", "loser": "Every McQueen needs a King"}, {"year": "2024", "week": 16, "home": "Olave Garden", "hmgr": "Cade Dalton", "hpts": 130.54, "away": "Federal Burrow of Investigation", "amgr": "Jack Sevier", "apts": 135.98, "margin": 5.44, "winner": "Federal Burrow of Investigation", "winmgr": "Jack Sevier", "loser": "Olave Garden"}, {"year": "2024", "week": 15, "home": "The Princess McBride", "hmgr": "Cole Dalton", "hpts": 170.04, "away": "I agree with Harrison Butker", "amgr": "Alex Fankhauser", "apts": 164.58, "margin": 5.46, "winner": "The Princess McBride", "winmgr": "Cole Dalton", "loser": "I agree with Harrison Butker"}, {"year": "2024", "week": 2, "home": "Get Krafty", "hmgr": "Rylan Wilson", "hpts": 150.18, "away": "Da Dak Breakers", "amgr": "Puneet Nunsavathu", "apts": 156.42, "margin": 6.24, "winner": "Da Dak Breakers", "winmgr": "Puneet Nunsavathu", "loser": "Get Krafty"}, {"year": "2024", "week": 10, "home": "Tucker Punch", "hmgr": "Dylan Northeim", "hpts": 106.88, "away": "Da Dak Breakers", "amgr": "Puneet Nunsavathu", "apts": 99.9, "margin": 6.98, "winner": "Tucker Punch", "winmgr": "Dylan Northeim", "loser": "Da Dak Breakers"}, {"year": "2024", "week": 2, "home": "The Princess McBride", "hmgr": "Cole Dalton", "hpts": 132.54, "away": "Olave Garden", "amgr": "Cade Dalton", "apts": 125.02, "margin": 7.52, "winner": "The Princess McBride", "winmgr": "Cole Dalton", "loser": "Olave Garden"}, {"year": "2024", "week": 15, "home": "Tucker Punch", "hmgr": "Dylan Northeim", "hpts": 127.8, "away": "Federal Burrow of Investigation", "amgr": "Jack Sevier", "apts": 120.24, "margin": 7.56, "winner": "Tucker Punch", "winmgr": "Dylan Northeim", "loser": "Federal Burrow of Investigation"}, {"year": "2024", "week": 10, "home": "Olave Garden", "hmgr": "Cade Dalton", "hpts": 110.78, "away": "The Princess McBride", "amgr": "Cole Dalton", "apts": 102.58, "margin": 8.2, "winner": "Olave Garden", "winmgr": "Cade Dalton", "loser": "The Princess McBride"}, {"year": "2024", "week": 11, "home": "Da Dak Breakers", "hmgr": "Puneet Nunsavathu", "hpts": 109.78, "away": "Get Krafty", "amgr": "Rylan Wilson", "apts": 100.68, "margin": 9.1, "winner": "Da Dak Breakers", "winmgr": "Puneet Nunsavathu", "loser": "Get Krafty"}, {"year": "2024", "week": 17, "home": "Da Dak Breakers", "hmgr": "Puneet Nunsavathu", "hpts": 106.84, "away": "The Princess McBride", "amgr": "Cole Dalton", "apts": 116.38, "margin": 9.54, "winner": "The Princess McBride", "winmgr": "Cole Dalton", "loser": "Da Dak Breakers"}, {"year": "2024", "week": 6, "home": "Olave Garden", "hmgr": "Cade Dalton", "hpts": 123.6, "away": "Tucker Punch", "amgr": "Dylan Northeim", "apts": 133.22, "margin": 9.62, "winner": "Tucker Punch", "winmgr": "Dylan Northeim", "loser": "Olave Garden"}, {"year": "2024", "week": 15, "home": "Nacua Matata", "hmgr": "Nico Dattilo", "hpts": 114.04, "away": "Get Krafty", "amgr": "Rylan Wilson", "apts": 123.7, "margin": 9.66, "winner": "Get Krafty", "winmgr": "Rylan Wilson", "loser": "Nacua Matata"}, {"year": "2024", "week": 16, "home": "Get Krafty", "hmgr": "Rylan Wilson", "hpts": 113.78, "away": "Every McQueen needs a King", "amgr": "Dillon Deason", "apts": 123.58, "margin": 9.8, "winner": "Every McQueen needs a King", "winmgr": "Dillon Deason", "loser": "Get Krafty"}, {"year": "2024", "week": 13, "home": "Olave Garden", "hmgr": "Cade Dalton", "hpts": 153.22, "away": "I agree with Harrison Butker", "amgr": "Alex Fankhauser", "apts": 142.82, "margin": 10.4, "winner": "Olave Garden", "winmgr": "Cade Dalton", "loser": "I agree with Harrison Butker"}, {"year": "2024", "week": 6, "home": "Federal Burrow of Investigation", "hmgr": "Jack Sevier", "hpts": 118.1, "away": "Nacua Matata", "amgr": "Nico Dattilo", "apts": 129.52, "margin": 11.42, "winner": "Nacua Matata", "winmgr": "Nico Dattilo", "loser": "Federal Burrow of Investigation"}, {"year": "2024", "week": 9, "home": "The Princess McBride", "hmgr": "Cole Dalton", "hpts": 109.96, "away": "I agree with Harrison Butker", "amgr": "Alex Fankhauser", "apts": 98.48, "margin": 11.48, "winner": "The Princess McBride", "winmgr": "Cole Dalton", "loser": "I agree with Harrison Butker"}, {"year": "2024", "week": 8, "home": "The Princess McBride", "hmgr": "Cole Dalton", "hpts": 140.14, "away": "Nacua Matata", "amgr": "Nico Dattilo", "apts": 128, "margin": 12.14, "winner": "The Princess McBride", "winmgr": "Cole Dalton", "loser": "Nacua Matata"}, {"year": "2024", "week": 12, "home": "The Princess McBride", "hmgr": "Cole Dalton", "hpts": 123.4, "away": "Federal Burrow of Investigation", "amgr": "Jack Sevier", "apts": 135.68, "margin": 12.28, "winner": "Federal Burrow of Investigation", "winmgr": "Jack Sevier", "loser": "The Princess McBride"}, {"year": "2024", "week": 11, "home": "Federal Burrow of Investigation", "hmgr": "Jack Sevier", "hpts": 154.04, "away": "Olave Garden", "amgr": "Cade Dalton", "apts": 166.44, "margin": 12.4, "winner": "Olave Garden", "winmgr": "Cade Dalton", "loser": "Federal Burrow of Investigation"}, {"year": "2024", "week": 2, "home": "Tucker Punch", "hmgr": "Dylan Northeim", "hpts": 138.32, "away": "Every McQueen needs a King", "amgr": "Dillon Deason", "apts": 123.48, "margin": 14.84, "winner": "Tucker Punch", "winmgr": "Dylan Northeim", "loser": "Every McQueen needs a King"}, {"year": "2024", "week": 13, "home": "Every McQueen needs a King", "hmgr": "Dillon Deason", "hpts": 128.54, "away": "The Princess McBride", "amgr": "Cole Dalton", "apts": 143.44, "margin": 14.9, "winner": "The Princess McBride", "winmgr": "Cole Dalton", "loser": "Every McQueen needs a King"}, {"year": "2024", "week": 1, "home": "I agree with Harrison Butker", "hmgr": "Alex Fankhauser", "hpts": 140.68, "away": "The Princess McBride", "amgr": "Cole Dalton", "apts": 155.94, "margin": 15.26, "winner": "The Princess McBride", "winmgr": "Cole Dalton", "loser": "I agree with Harrison Butker"}, {"year": "2024", "week": 16, "home": "The Princess McBride", "hmgr": "Cole Dalton", "hpts": 143.92, "away": "Tucker Punch", "amgr": "Dylan Northeim", "apts": 159.22, "margin": 15.3, "winner": "Tucker Punch", "winmgr": "Dylan Northeim", "loser": "The Princess McBride"}, {"year": "2024", "week": 11, "home": "Nacua Matata", "hmgr": "Nico Dattilo", "hpts": 129.88, "away": "Game is Game", "amgr": "Jacob Thompson", "apts": 145.98, "margin": 16.1, "winner": "Game is Game", "winmgr": "Jacob Thompson", "loser": "Nacua Matata"}, {"year": "2024", "week": 8, "home": "I agree with Harrison Butker", "hmgr": "Alex Fankhauser", "hpts": 149.82, "away": "Tucker Punch", "amgr": "Dylan Northeim", "apts": 133.66, "margin": 16.16, "winner": "I agree with Harrison Butker", "winmgr": "Alex Fankhauser", "loser": "Tucker Punch"}, {"year": "2024", "week": 17, "home": "Federal Burrow of Investigation", "hmgr": "Jack Sevier", "hpts": 112.78, "away": "I agree with Harrison Butker", "amgr": "Alex Fankhauser", "apts": 95.68, "margin": 17.1, "winner": "Federal Burrow of Investigation", "winmgr": "Jack Sevier", "loser": "I agree with Harrison Butker"}, {"year": "2024", "week": 6, "home": "The Princess McBride", "hmgr": "Cole Dalton", "hpts": 106.16, "away": "Get Krafty", "amgr": "Rylan Wilson", "apts": 88.52, "margin": 17.64, "winner": "The Princess McBride", "winmgr": "Cole Dalton", "loser": "Get Krafty"}, {"year": "2024", "week": 14, "home": "Every McQueen needs a King", "hmgr": "Dillon Deason", "hpts": 73.92, "away": "Tucker Punch", "amgr": "Dylan Northeim", "apts": 91.7, "margin": 17.78, "winner": "Tucker Punch", "winmgr": "Dylan Northeim", "loser": "Every McQueen needs a King"}, {"year": "2024", "week": 7, "home": "Tucker Punch", "hmgr": "Dylan Northeim", "hpts": 101.24, "away": "Federal Burrow of Investigation", "amgr": "Jack Sevier", "apts": 119.24, "margin": 18.0, "winner": "Federal Burrow of Investigation", "winmgr": "Jack Sevier", "loser": "Tucker Punch"}, {"year": "2024", "week": 13, "home": "Get Krafty", "hmgr": "Rylan Wilson", "hpts": 139.08, "away": "Federal Burrow of Investigation", "amgr": "Jack Sevier", "apts": 120.56, "margin": 18.52, "winner": "Get Krafty", "winmgr": "Rylan Wilson", "loser": "Federal Burrow of Investigation"}, {"year": "2024", "week": 12, "home": "Da Dak Breakers", "hmgr": "Puneet Nunsavathu", "hpts": 138.32, "away": "Nacua Matata", "amgr": "Nico Dattilo", "apts": 119.46, "margin": 18.86, "winner": "Da Dak Breakers", "winmgr": "Puneet Nunsavathu", "loser": "Nacua Matata"}, {"year": "2024", "week": 10, "home": "Federal Burrow of Investigation", "hmgr": "Jack Sevier", "hpts": 116.42, "away": "I agree with Harrison Butker", "amgr": "Alex Fankhauser", "apts": 97.5, "margin": 18.92, "winner": "Federal Burrow of Investigation", "winmgr": "Jack Sevier", "loser": "I agree with Harrison Butker"}, {"year": "2024", "week": 3, "home": "Olave Garden", "hmgr": "Cade Dalton", "hpts": 84.64, "away": "Federal Burrow of Investigation", "amgr": "Jack Sevier", "apts": 104.9, "margin": 20.26, "winner": "Federal Burrow of Investigation", "winmgr": "Jack Sevier", "loser": "Olave Garden"}, {"year": "2024", "week": 17, "home": "Tucker Punch", "hmgr": "Dylan Northeim", "hpts": 125.66, "away": "Game is Game", "amgr": "Jacob Thompson", "apts": 104.44, "margin": 21.22, "winner": "Tucker Punch", "winmgr": "Dylan Northeim", "loser": "Game is Game"}, {"year": "2024", "week": 6, "home": "Every McQueen needs a King", "hmgr": "Dillon Deason", "hpts": 145.02, "away": "Game is Game", "amgr": "Jacob Thompson", "apts": 122.26, "margin": 22.76, "winner": "Every McQueen needs a King", "winmgr": "Dillon Deason", "loser": "Game is Game"}, {"year": "2024", "week": 11, "home": "I agree with Harrison Butker", "hmgr": "Alex Fankhauser", "hpts": 115.68, "away": "Every McQueen needs a King", "amgr": "Dillon Deason", "apts": 139.04, "margin": 23.36, "winner": "Every McQueen needs a King", "winmgr": "Dillon Deason", "loser": "I agree with Harrison Butker"}, {"year": "2024", "week": 9, "home": "Da Dak Breakers", "hmgr": "Puneet Nunsavathu", "hpts": 119.58, "away": "Olave Garden", "amgr": "Cade Dalton", "apts": 96, "margin": 23.58, "winner": "Da Dak Breakers", "winmgr": "Puneet Nunsavathu", "loser": "Olave Garden"}, {"year": "2024", "week": 14, "home": "Federal Burrow of Investigation", "hmgr": "Jack Sevier", "hpts": 116.26, "away": "Da Dak Breakers", "amgr": "Puneet Nunsavathu", "apts": 140.62, "margin": 24.36, "winner": "Da Dak Breakers", "winmgr": "Puneet Nunsavathu", "loser": "Federal Burrow of Investigation"}, {"year": "2024", "week": 14, "home": "The Princess McBride", "hmgr": "Cole Dalton", "hpts": 136.32, "away": "Game is Game", "amgr": "Jacob Thompson", "apts": 110.06, "margin": 26.26, "winner": "The Princess McBride", "winmgr": "Cole Dalton", "loser": "Game is Game"}, {"year": "2024", "week": 17, "home": "Nacua Matata", "hmgr": "Nico Dattilo", "hpts": 165.12, "away": "Every McQueen needs a King", "amgr": "Dillon Deason", "apts": 192.9, "margin": 27.78, "winner": "Every McQueen needs a King", "winmgr": "Dillon Deason", "loser": "Nacua Matata"}, {"year": "2024", "week": 13, "home": "Tucker Punch", "hmgr": "Dylan Northeim", "hpts": 95.2, "away": "Nacua Matata", "amgr": "Nico Dattilo", "apts": 123.04, "margin": 27.84, "winner": "Nacua Matata", "winmgr": "Nico Dattilo", "loser": "Tucker Punch"}, {"year": "2024", "week": 1, "home": "Nacua Matata", "hmgr": "Nico Dattilo", "hpts": 89.88, "away": "Olave Garden", "amgr": "Cade Dalton", "apts": 118.12, "margin": 28.24, "winner": "Olave Garden", "winmgr": "Cade Dalton", "loser": "Nacua Matata"}, {"year": "2024", "week": 9, "home": "Every McQueen needs a King", "hmgr": "Dillon Deason", "hpts": 143.72, "away": "Federal Burrow of Investigation", "amgr": "Jack Sevier", "apts": 172.84, "margin": 29.12, "winner": "Federal Burrow of Investigation", "winmgr": "Jack Sevier", "loser": "Every McQueen needs a King"}, {"year": "2024", "week": 4, "home": "Get Krafty", "hmgr": "Rylan Wilson", "hpts": 123.34, "away": "I agree with Harrison Butker", "amgr": "Alex Fankhauser", "apts": 93.9, "margin": 29.44, "winner": "Get Krafty", "winmgr": "Rylan Wilson", "loser": "I agree with Harrison Butker"}, {"year": "2024", "week": 10, "home": "Nacua Matata", "hmgr": "Nico Dattilo", "hpts": 144.04, "away": "Every McQueen needs a King", "amgr": "Dillon Deason", "apts": 114.08, "margin": 29.96, "winner": "Nacua Matata", "winmgr": "Nico Dattilo", "loser": "Every McQueen needs a King"}, {"year": "2024", "week": 4, "home": "Olave Garden", "hmgr": "Cade Dalton", "hpts": 116.02, "away": "Every McQueen needs a King", "amgr": "Dillon Deason", "apts": 146.2, "margin": 30.18, "winner": "Every McQueen needs a King", "winmgr": "Dillon Deason", "loser": "Olave Garden"}, {"year": "2024", "week": 1, "home": "Get Krafty", "hmgr": "Rylan Wilson", "hpts": 100.52, "away": "Game is Game", "amgr": "Jacob Thompson", "apts": 131.48, "margin": 30.96, "winner": "Game is Game", "winmgr": "Jacob Thompson", "loser": "Get Krafty"}, {"year": "2024", "week": 2, "home": "I agree with Harrison Butker", "hmgr": "Alex Fankhauser", "hpts": 113.96, "away": "Federal Burrow of Investigation", "amgr": "Jack Sevier", "apts": 82.5, "margin": 31.46, "winner": "I agree with Harrison Butker", "winmgr": "Alex Fankhauser", "loser": "Federal Burrow of Investigation"}, {"year": "2024", "week": 12, "home": "Every McQueen needs a King", "hmgr": "Dillon Deason", "hpts": 102.06, "away": "Olave Garden", "amgr": "Cade Dalton", "apts": 133.86, "margin": 31.8, "winner": "Olave Garden", "winmgr": "Cade Dalton", "loser": "Every McQueen needs a King"}, {"year": "2024", "week": 5, "home": "The Princess McBride", "hmgr": "Cole Dalton", "hpts": 130.22, "away": "Every McQueen needs a King", "amgr": "Dillon Deason", "apts": 97.96, "margin": 32.26, "winner": "The Princess McBride", "winmgr": "Cole Dalton", "loser": "Every McQueen needs a King"}, {"year": "2024", "week": 3, "home": "Tucker Punch", "hmgr": "Dylan Northeim", "hpts": 102.46, "away": "Get Krafty", "amgr": "Rylan Wilson", "apts": 69.78, "margin": 32.68, "winner": "Tucker Punch", "winmgr": "Dylan Northeim", "loser": "Get Krafty"}, {"year": "2024", "week": 5, "home": "Get Krafty", "hmgr": "Rylan Wilson", "hpts": 127.02, "away": "Nacua Matata", "amgr": "Nico Dattilo", "apts": 160.94, "margin": 33.92, "winner": "Nacua Matata", "winmgr": "Nico Dattilo", "loser": "Get Krafty"}, {"year": "2024", "week": 5, "home": "Game is Game", "hmgr": "Jacob Thompson", "hpts": 113.5, "away": "Tucker Punch", "amgr": "Dylan Northeim", "apts": 147.58, "margin": 34.08, "winner": "Tucker Punch", "winmgr": "Dylan Northeim", "loser": "Game is Game"}, {"year": "2024", "week": 7, "home": "Get Krafty", "hmgr": "Rylan Wilson", "hpts": 91.94, "away": "Every McQueen needs a King", "amgr": "Dillon Deason", "apts": 126.5, "margin": 34.56, "winner": "Every McQueen needs a King", "winmgr": "Dillon Deason", "loser": "Get Krafty"}, {"year": "2024", "week": 9, "home": "Tucker Punch", "hmgr": "Dylan Northeim", "hpts": 153.32, "away": "Game is Game", "amgr": "Jacob Thompson", "apts": 116.36, "margin": 36.96, "winner": "Tucker Punch", "winmgr": "Dylan Northeim", "loser": "Game is Game"}, {"year": "2024", "week": 4, "home": "Nacua Matata", "hmgr": "Nico Dattilo", "hpts": 99.4, "away": "Tucker Punch", "amgr": "Dylan Northeim", "apts": 138.06, "margin": 38.66, "winner": "Tucker Punch", "winmgr": "Dylan Northeim", "loser": "Nacua Matata"}, {"year": "2024", "week": 10, "home": "Game is Game", "hmgr": "Jacob Thompson", "hpts": 93.84, "away": "Get Krafty", "amgr": "Rylan Wilson", "apts": 132.9, "margin": 39.06, "winner": "Get Krafty", "winmgr": "Rylan Wilson", "loser": "Game is Game"}, {"year": "2024", "week": 1, "home": "Da Dak Breakers", "hmgr": "Puneet Nunsavathu", "hpts": 130.46, "away": "Tucker Punch", "amgr": "Dylan Northeim", "apts": 89.66, "margin": 40.8, "winner": "Da Dak Breakers", "winmgr": "Puneet Nunsavathu", "loser": "Tucker Punch"}, {"year": "2024", "week": 3, "home": "Game is Game", "hmgr": "Jacob Thompson", "hpts": 116.58, "away": "The Princess McBride", "amgr": "Cole Dalton", "apts": 75.58, "margin": 41.0, "winner": "Game is Game", "winmgr": "Jacob Thompson", "loser": "The Princess McBride"}, {"year": "2024", "week": 7, "home": "Nacua Matata", "hmgr": "Nico Dattilo", "hpts": 111.06, "away": "I agree with Harrison Butker", "amgr": "Alex Fankhauser", "apts": 152.42, "margin": 41.36, "winner": "I agree with Harrison Butker", "winmgr": "Alex Fankhauser", "loser": "Nacua Matata"}, {"year": "2024", "week": 13, "home": "Game is Game", "hmgr": "Jacob Thompson", "hpts": 126.84, "away": "Da Dak Breakers", "amgr": "Puneet Nunsavathu", "apts": 84.58, "margin": 42.26, "winner": "Game is Game", "winmgr": "Jacob Thompson", "loser": "Da Dak Breakers"}, {"year": "2024", "week": 8, "home": "Every McQueen needs a King", "hmgr": "Dillon Deason", "hpts": 112.74, "away": "Da Dak Breakers", "amgr": "Puneet Nunsavathu", "apts": 155.46, "margin": 42.72, "winner": "Da Dak Breakers", "winmgr": "Puneet Nunsavathu", "loser": "Every McQueen needs a King"}, {"year": "2024", "week": 15, "home": "Game is Game", "hmgr": "Jacob Thompson", "hpts": 141.06, "away": "Olave Garden", "amgr": "Cade Dalton", "apts": 97, "margin": 44.06, "winner": "Game is Game", "winmgr": "Jacob Thompson", "loser": "Olave Garden"}, {"year": "2024", "week": 6, "home": "I agree with Harrison Butker", "hmgr": "Alex Fankhauser", "hpts": 95, "away": "Da Dak Breakers", "amgr": "Puneet Nunsavathu", "apts": 141.32, "margin": 46.32, "winner": "Da Dak Breakers", "winmgr": "Puneet Nunsavathu", "loser": "I agree with Harrison Butker"}, {"year": "2024", "week": 12, "home": "Game is Game", "hmgr": "Jacob Thompson", "hpts": 87, "away": "I agree with Harrison Butker", "amgr": "Alex Fankhauser", "apts": 133.62, "margin": 46.62, "winner": "I agree with Harrison Butker", "winmgr": "Alex Fankhauser", "loser": "Game is Game"}, {"year": "2024", "week": 9, "home": "Nacua Matata", "hmgr": "Nico Dattilo", "hpts": 82.9, "away": "Get Krafty", "amgr": "Rylan Wilson", "apts": 130.1, "margin": 47.2, "winner": "Get Krafty", "winmgr": "Rylan Wilson", "loser": "Nacua Matata"}, {"year": "2024", "week": 3, "home": "Every McQueen needs a King", "hmgr": "Dillon Deason", "hpts": 100.76, "away": "I agree with Harrison Butker", "amgr": "Alex Fankhauser", "apts": 149.04, "margin": 48.28, "winner": "I agree with Harrison Butker", "winmgr": "Alex Fankhauser", "loser": "Every McQueen needs a King"}, {"year": "2024", "week": 3, "home": "Nacua Matata", "hmgr": "Nico Dattilo", "hpts": 106.78, "away": "Da Dak Breakers", "amgr": "Puneet Nunsavathu", "apts": 155.06, "margin": 48.28, "winner": "Da Dak Breakers", "winmgr": "Puneet Nunsavathu", "loser": "Nacua Matata"}, {"year": "2024", "week": 4, "home": "Da Dak Breakers", "hmgr": "Puneet Nunsavathu", "hpts": 105.74, "away": "Game is Game", "amgr": "Jacob Thompson", "apts": 154.08, "margin": 48.34, "winner": "Game is Game", "winmgr": "Jacob Thompson", "loser": "Da Dak Breakers"}, {"year": "2024", "week": 7, "home": "Game is Game", "hmgr": "Jacob Thompson", "hpts": 161.4, "away": "Olave Garden", "amgr": "Cade Dalton", "apts": 112.56, "margin": 48.84, "winner": "Game is Game", "winmgr": "Jacob Thompson", "loser": "Olave Garden"}, {"year": "2024", "week": 5, "home": "Da Dak Breakers", "hmgr": "Puneet Nunsavathu", "hpts": 107.58, "away": "Federal Burrow of Investigation", "amgr": "Jack Sevier", "apts": 157.84, "margin": 50.26, "winner": "Federal Burrow of Investigation", "winmgr": "Jack Sevier", "loser": "Da Dak Breakers"}, {"year": "2024", "week": 4, "home": "Federal Burrow of Investigation", "hmgr": "Jack Sevier", "hpts": 93.9, "away": "The Princess McBride", "amgr": "Cole Dalton", "apts": 144.72, "margin": 50.82, "winner": "The Princess McBride", "winmgr": "Cole Dalton", "loser": "Federal Burrow of Investigation"}, {"year": "2024", "week": 7, "home": "Da Dak Breakers", "hmgr": "Puneet Nunsavathu", "hpts": 123.82, "away": "The Princess McBride", "amgr": "Cole Dalton", "apts": 61.74, "margin": 62.08, "winner": "Da Dak Breakers", "winmgr": "Puneet Nunsavathu", "loser": "The Princess McBride"}, {"year": "2024", "week": 8, "home": "Federal Burrow of Investigation", "hmgr": "Jack Sevier", "hpts": 72.76, "away": "Game is Game", "amgr": "Jacob Thompson", "apts": 148.6, "margin": 75.84, "winner": "Game is Game", "winmgr": "Jacob Thompson", "loser": "Federal Burrow of Investigation"}, {"year": "2024", "week": 2, "home": "Game is Game", "hmgr": "Jacob Thompson", "hpts": 159.58, "away": "Nacua Matata", "amgr": "Nico Dattilo", "apts": 77.26, "margin": 82.32, "winner": "Game is Game", "winmgr": "Jacob Thompson", "loser": "Nacua Matata"}, {"year": "2024", "week": 14, "home": "Olave Garden", "hmgr": "Cade Dalton", "hpts": 98.42, "away": "Nacua Matata", "amgr": "Nico Dattilo", "apts": 185.18, "margin": 86.76, "winner": "Nacua Matata", "winmgr": "Nico Dattilo", "loser": "Olave Garden"}, {"year": "2024", "week": 14, "home": "I agree with Harrison Butker", "hmgr": "Alex Fankhauser", "hpts": 186.48, "away": "Get Krafty", "amgr": "Rylan Wilson", "apts": 93.66, "margin": 92.82, "winner": "I agree with Harrison Butker", "winmgr": "Alex Fankhauser", "loser": "Get Krafty"}], "top10_by_position": {"QB": [{"year": "2024", "week": 14, "team": "I agree with Harrison Butker", "mgr": "Alex Fankhauser", "player": "Josh Allen", "pos": "QB", "pts": 51.88, "started": true}, {"year": "2024", "week": 15, "team": "I agree with Harrison Butker", "mgr": "Alex Fankhauser", "player": "Josh Allen", "pos": "QB", "pts": 41.28, "started": true}, {"year": "2024", "week": 17, "team": "Federal Burrow of Investigation", "mgr": "Jack Sevier", "player": "Joe Burrow", "pos": "QB", "pts": 36.98, "started": true}, {"year": "2024", "week": 15, "team": "Get Krafty", "mgr": "Rylan Wilson", "player": "Lamar Jackson", "pos": "QB", "pts": 36.1, "started": true}, {"year": "2024", "week": 8, "team": "Olave Garden", "mgr": "Cade Dalton", "player": "Jalen Hurts", "pos": "QB", "pts": 35.14, "started": true}, {"year": "2024", "week": 11, "team": "Nacua Matata", "mgr": "Nico Dattilo", "player": "Jared Goff", "pos": "QB", "pts": 34.58, "started": true}, {"year": "2024", "week": 14, "team": "Nacua Matata", "mgr": "Nico Dattilo", "player": "Sam Darnold", "pos": "QB", "pts": 34.58, "started": true}, {"year": "2024", "week": 17, "team": "Tucker Punch", "mgr": "Dylan Northeim", "player": "Baker Mayfield", "pos": "QB", "pts": 34.56, "started": true}, {"year": "2024", "week": 7, "team": "Get Krafty", "mgr": "Rylan Wilson", "player": "Lamar Jackson", "pos": "QB", "pts": 34.44, "started": true}, {"year": "2024", "week": 16, "team": "The Princess McBride", "mgr": "Cole Dalton", "player": "Jayden Daniels", "pos": "QB", "pts": 34.42, "started": true}], "RB": [{"year": "2024", "week": 12, "team": "Federal Burrow of Investigation", "mgr": "Jack Sevier", "player": "Saquon Barkley", "pos": "RB", "pts": 46.2, "started": true}, {"year": "2024", "week": 2, "team": "Game is Game", "mgr": "Jacob Thompson", "player": "Alvin Kamara", "pos": "RB", "pts": 44, "started": true}, {"year": "2024", "week": 4, "team": "Every McQueen needs a King", "mgr": "Dillon Deason", "player": "Derrick Henry", "pos": "RB", "pts": 35.9, "started": true}, {"year": "2024", "week": 11, "team": "Game is Game", "mgr": "Jacob Thompson", "player": "Joe Mixon", "pos": "RB", "pts": 35.3, "started": true}, {"year": "2024", "week": 11, "team": "Federal Burrow of Investigation", "mgr": "Jack Sevier", "player": "Saquon Barkley", "pos": "RB", "pts": 33.8, "started": true}, {"year": "2024", "week": 3, "team": "Federal Burrow of Investigation", "mgr": "Jack Sevier", "player": "Saquon Barkley", "pos": "RB", "pts": 33.6, "started": true}, {"year": "2024", "week": 4, "team": "Game is Game", "mgr": "Jacob Thompson", "player": "Kenneth Walker III", "pos": "RB", "pts": 33.6, "started": true}, {"year": "2024", "week": 1, "team": "Federal Burrow of Investigation", "mgr": "Jack Sevier", "player": "Saquon Barkley", "pos": "RB", "pts": 33.2, "started": true}, {"year": "2024", "week": 9, "team": "Federal Burrow of Investigation", "mgr": "Jack Sevier", "player": "Saquon Barkley", "pos": "RB", "pts": 32.9, "started": true}, {"year": "2024", "week": 16, "team": "Tucker Punch", "mgr": "Dylan Northeim", "player": "Chuba Hubbard", "pos": "RB", "pts": 32.5, "started": true}], "WR": [{"year": "2024", "week": 10, "team": "Nacua Matata", "mgr": "Nico Dattilo", "player": "Ja'Marr Chase", "pos": "WR", "pts": 55.4, "started": true}, {"year": "2024", "week": 14, "team": "Nacua Matata", "mgr": "Nico Dattilo", "player": "Ja'Marr Chase", "pos": "WR", "pts": 45.1, "started": true}, {"year": "2024", "week": 15, "team": "The Princess McBride", "mgr": "Cole Dalton", "player": "Davante Adams", "pos": "WR", "pts": 42.8, "started": true}, {"year": "2024", "week": 14, "team": "Nacua Matata", "mgr": "Nico Dattilo", "player": "Puka Nacua", "pos": "WR", "pts": 41.8, "started": true}, {"year": "2024", "week": 5, "team": "Nacua Matata", "mgr": "Nico Dattilo", "player": "Ja'Marr Chase", "pos": "WR", "pts": 41.3, "started": true}, {"year": "2024", "week": 17, "team": "Every McQueen needs a King", "mgr": "Dillon Deason", "player": "Tee Higgins", "pos": "WR", "pts": 40.1, "started": true}, {"year": "2024", "week": 8, "team": "Game is Game", "mgr": "Jacob Thompson", "player": "CeeDee Lamb", "pos": "WR", "pts": 39.6, "started": true}, {"year": "2024", "week": 11, "team": "Tucker Punch", "mgr": "Dylan Northeim", "player": "Amon-Ra St. Brown", "pos": "WR", "pts": 38.7, "started": true}, {"year": "2024", "week": 15, "team": "Tucker Punch", "mgr": "Dylan Northeim", "player": "Amon-Ra St. Brown", "pos": "WR", "pts": 37.3, "started": true}, {"year": "2024", "week": 15, "team": "Every McQueen needs a King", "mgr": "Dillon Deason", "player": "Mike Evans", "pos": "WR", "pts": 36.9, "started": true}], "TE": [{"year": "2024", "week": 11, "team": "The Princess McBride", "mgr": "Cole Dalton", "player": "Taysom Hill", "pos": "TE", "pts": 41.52, "started": true}, {"year": "2024", "week": 11, "team": "Game is Game", "mgr": "Jacob Thompson", "player": "Brock Bowers", "pos": "TE", "pts": 31.3, "started": true}, {"year": "2024", "week": 17, "team": "The Princess McBride", "mgr": "Cole Dalton", "player": "Trey McBride", "pos": "TE", "pts": 30.3, "started": true}, {"year": "2024", "week": 13, "team": "Game is Game", "mgr": "Jacob Thompson", "player": "Brock Bowers", "pos": "TE", "pts": 30.2, "started": true}, {"year": "2024", "week": 13, "team": "Olave Garden", "mgr": "Cade Dalton", "player": "David Njoku", "pos": "TE", "pts": 26.2, "started": true}, {"year": "2024", "week": 12, "team": "The Princess McBride", "mgr": "Cole Dalton", "player": "Trey McBride", "pos": "TE", "pts": 25.3, "started": true}, {"year": "2024", "week": 8, "team": "I agree with Harrison Butker", "mgr": "Alex Fankhauser", "player": "Kyle Pitts", "pos": "TE", "pts": 25.1, "started": true}, {"year": "2024", "week": 8, "team": "Tucker Punch", "mgr": "Dylan Northeim", "player": "Travis Kelce", "pos": "TE", "pts": 25, "started": true}, {"year": "2024", "week": 5, "team": "Get Krafty", "mgr": "Rylan Wilson", "player": "Tucker Kraft", "pos": "TE", "pts": 24.8, "started": true}, {"year": "2024", "week": 8, "team": "Da Dak Breakers", "mgr": "Puneet Nunsavathu", "player": "George Kittle", "pos": "TE", "pts": 24.8, "started": true}], "K": [{"year": "2024", "week": 1, "team": "Every McQueen needs a King", "mgr": "Dillon Deason", "player": "Jake Moody", "pos": "K", "pts": 26, "started": true}, {"year": "2024", "week": 11, "team": "Olave Garden", "mgr": "Cade Dalton", "player": "Chris Boswell", "pos": "K", "pts": 24, "started": true}, {"year": "2024", "week": 1, "team": "The Princess McBride", "mgr": "Cole Dalton", "player": "Brandon Aubrey", "pos": "K", "pts": 21, "started": true}, {"year": "2024", "week": 16, "team": "The Princess McBride", "mgr": "Cole Dalton", "player": "Brandon Aubrey", "pos": "K", "pts": 21, "started": true}, {"year": "2024", "week": 16, "team": "Federal Burrow of Investigation", "mgr": "Jack Sevier", "player": "Jason Sanders", "pos": "K", "pts": 21, "started": true}, {"year": "2024", "week": 2, "team": "Da Dak Breakers", "mgr": "Puneet Nunsavathu", "player": "Ka'imi Fairbairn", "pos": "K", "pts": 20, "started": true}, {"year": "2024", "week": 4, "team": "Game is Game", "mgr": "Jacob Thompson", "player": "Younghoe Koo", "pos": "K", "pts": 20, "started": true}, {"year": "2024", "week": 15, "team": "Get Krafty", "mgr": "Rylan Wilson", "player": "Chase McLaughlin", "pos": "K", "pts": 18, "started": true}, {"year": "2024", "week": 1, "team": "Da Dak Breakers", "mgr": "Puneet Nunsavathu", "player": "Ka'imi Fairbairn", "pos": "K", "pts": 17, "started": true}, {"year": "2024", "week": 2, "team": "The Princess McBride", "mgr": "Cole Dalton", "player": "Brandon Aubrey", "pos": "K", "pts": 17, "started": true}], "D/ST": [{"year": "2024", "week": 1, "team": "Game is Game", "mgr": "Jacob Thompson", "player": "Bears D/ST", "pos": "D/ST", "pts": 26, "started": true}, {"year": "2024", "week": 16, "team": "Da Dak Breakers", "mgr": "Puneet Nunsavathu", "player": "Falcons D/ST", "pos": "D/ST", "pts": 26, "started": true}, {"year": "2024", "week": 3, "team": "Game is Game", "mgr": "Jacob Thompson", "player": "Packers D/ST", "pos": "D/ST", "pts": 23, "started": true}, {"year": "2024", "week": 4, "team": "Olave Garden", "mgr": "Cade Dalton", "player": "49ers D/ST", "pos": "D/ST", "pts": 23, "started": true}, {"year": "2024", "week": 15, "team": "Tucker Punch", "mgr": "Dylan Northeim", "player": "Chiefs D/ST", "pos": "D/ST", "pts": 22, "started": true}, {"year": "2024", "week": 1, "team": "Every McQueen needs a King", "mgr": "Dillon Deason", "player": "Vikings D/ST", "pos": "D/ST", "pts": 21, "started": true}, {"year": "2024", "week": 7, "team": "Every McQueen needs a King", "mgr": "Dillon Deason", "player": "Broncos D/ST", "pos": "D/ST", "pts": 21, "started": true}, {"year": "2024", "week": 10, "team": "The Princess McBride", "mgr": "Cole Dalton", "player": "Eagles D/ST", "pos": "D/ST", "pts": 20, "started": true}, {"year": "2024", "week": 17, "team": "Nacua Matata", "mgr": "Nico Dattilo", "player": "Eagles D/ST", "pos": "D/ST", "pts": 20, "started": true}, {"year": "2024", "week": 1, "team": "Federal Burrow of Investigation", "mgr": "Jack Sevier", "player": "Cowboys D/ST", "pos": "D/ST", "pts": 19, "started": true}]}}};
+
+const teams2025 = {
+  1:{name:"Air Allen",mgr:"Dylan Northeim"}, 6:{name:"Cade's Eagles",mgr:"Cade Dalton"},
+  7:{name:'Cole "Brock That Body" Dalton',mgr:"Jack Sevier"}, 8:{name:"Brock That Body",mgr:"Cole Dalton"},
+  12:{name:"Drake Dynasty",mgr:"Nico Dattilo"}, 13:{name:"Get Komfy",mgr:"Rylan Wilson"},
+  14:{name:"De'Von Intervention",mgr:"Jacob Thompson"}, 15:{name:"G SPITTER",mgr:"Grant Wright"}
+};
+const standings2025 = [
+  {id:12,w:12,l:3,pf:2070.18,pa:1718.58,seed:1,rank:1}, {id:8,w:8,l:7,pf:1964.98,pa:1757.18,seed:3,rank:2},
+  {id:14,w:8,l:7,pf:1932.88,pa:1852.60,seed:4,rank:3}, {id:1,w:9,l:6,pf:1954.84,pa:1842.60,seed:2,rank:4},
+  {id:13,w:6,l:9,pf:1850.08,pa:1909.52,seed:7,rank:5}, {id:6,w:7,l:8,pf:1899.62,pa:1986.14,seed:5,rank:6},
+  {id:7,w:6,l:9,pf:1689.66,pa:1984.14,seed:6,rank:7}, {id:15,w:4,l:11,pf:1697.80,pa:2009.28,seed:8,rank:8}
+];
+const games2025 = [
+  [1,15,105.26,14,105.34],[1,1,136.16,12,104.52],[1,8,97.32,13,128.12],[1,6,99.98,7,126.72],
+  [2,1,142.92,15,130.0],[2,14,103.78,8,147.04],[2,12,125.4,6,118.14],[2,13,89.28,7,118.1],
+  [3,15,117.22,8,146.72],[3,6,141.54,1,130.72],[3,7,76.32,14,113.9],[3,13,120.96,12,109.92],
+  [4,6,113.1,15,84.58],[4,8,136.68,7,159.74],[4,1,146.36,13,142.5],[4,14,110.02,12,145.42],
+  [5,15,125.38,7,116.52],[5,13,152.12,6,144.1],[5,12,114.92,8,106.1],[5,14,128.74,1,154.84],
+  [6,13,141.08,15,149.16],[6,7,67.2,12,177.54],[6,6,101.42,14,163.16],[6,8,91.96,1,115.1],
+  [7,15,119.96,12,149.08],[7,14,89.84,13,142.64],[7,1,169.98,7,94.14],[7,8,170.9,6,131.04],
+  [8,14,135.8,15,85.52],[8,12,144.74,1,90.22],[8,13,122.36,8,110.58],[8,7,150.78,6,185.06],
+  [9,15,93.6,1,113.72],[9,8,181.7,14,111.72],[9,6,116.54,12,149.86],[9,7,128.48,13,113.0],
+  [10,8,159.0,15,121.4],[10,1,110.94,6,128.02],[10,14,156.3,7,116.78],[10,12,156.94,13,107.9],
+  [11,15,121.36,6,98.8],[11,7,88.34,8,82.94],[11,13,99.84,1,176.48],[11,12,130.44,14,123.02],
+  [12,7,136.44,15,131.26],[12,6,143.56,13,101.18],[12,8,137.92,12,147.06],[12,1,88.22,14,141.26],
+  [13,15,85.14,13,162.44],[13,12,118.78,7,109.76],[13,14,138.6,6,149.3],[13,1,93.62,8,122.44],
+  [14,12,112.36,15,116.06],[14,13,115.8,14,135.44],[14,7,96.1,1,146.94],[14,6,91.9,8,155.58],
+  [15,15,111.9,14,175.96],[15,1,138.62,12,183.2],[15,8,118.1,13,110.86],[15,6,137.12,7,104.24],
+  [16,14,91.22,12,133.9],[16,8,141.62,1,123.7],[16,7,105.62,6,145.7],[16,15,131.46,13,146.6],
+  [17,8,103.18,12,140.1],[17,14,153.48,1,135.18],[17,13,137.42,6,102.46],[17,15,61.08,7,103.18]
+];
+
+const teams2024 = {
+  1:{name:"Tucker Punch",mgr:"Dylan Northeim"}, 6:{name:"Olave Garden",mgr:"Cade Dalton"},
+  7:{name:"Federal Burrow of Investigation",mgr:"Jack Sevier"}, 8:{name:"The Princess McBride",mgr:"Cole Dalton"},
+  10:{name:"Da Dak Breakers",mgr:"Puneet Nunsavathu"}, 11:{name:"Every McQueen needs a King",mgr:"Dillon Deason"},
+  12:{name:"Nacua Matata",mgr:"Nico Dattilo"}, 13:{name:"Get Krafty",mgr:"Rylan Wilson"},
+  14:{name:"Game is Game",mgr:"Jacob Thompson"}, 15:{name:"I agree with Harrison Butker",mgr:"Alex Fankhauser"}
+};
+const standings2024 = [
+  {id:1,w:9,l:5,pf:1658.44,pa:1569.24,seed:3,rank:1}, {id:14,w:8,l:6,pf:1787.56,pa:1607.64,seed:4,rank:2},
+  {id:8,w:9,l:5,pf:1689.3,pa:1625.0,seed:2,rank:3}, {id:10,w:10,l:4,pf:1768.64,pa:1594.14,seed:1,rank:4},
+  {id:7,w:7,l:7,pf:1699.8,pa:1770.82,seed:6,rank:5}, {id:15,w:6,l:8,pf:1781.44,pa:1663.64,seed:7,rank:6},
+  {id:6,w:7,l:7,pf:1707.7,pa:1837.50,seed:5,rank:7}, {id:11,w:4,l:10,pf:1683.82,pa:1839.58,seed:10,rank:8},
+  {id:12,w:5,l:9,pf:1687.34,pa:1830.6,seed:8,rank:9}, {id:13,w:5,l:9,pf:1598.96,pa:1724.84,seed:9,rank:10}
+];
+const games2024 = [
+  [1,6,118.12,12,89.88],[1,1,89.66,10,130.46],[1,11,129.8,7,134.76],[1,14,131.48,13,100.52],[1,8,155.94,15,140.68],
+  [2,11,123.48,1,138.32],[2,12,77.26,14,159.58],[2,6,125.02,8,132.54],[2,10,156.42,13,150.18],[2,7,82.5,15,113.96],
+  [3,8,75.58,14,116.58],[3,13,69.78,1,102.46],[3,15,149.04,11,100.76],[3,10,155.06,12,106.78],[3,7,104.9,6,84.64],
+  [4,15,93.9,13,123.34],[4,14,154.08,10,105.74],[4,8,144.72,7,93.9],[4,1,138.06,12,99.4],[4,11,146.2,6,116.02],
+  [5,7,157.84,10,107.58],[5,12,160.94,13,127.02],[5,6,115.76,15,112.04],[5,1,147.58,14,113.5],[5,11,97.96,8,130.22],
+  [6,1,133.22,6,123.6],[6,14,122.26,11,145.02],[6,13,88.52,8,106.16],[6,10,141.32,15,95.0],[6,12,129.52,7,118.1],
+  [7,6,112.56,14,161.4],[7,11,126.5,13,91.94],[7,8,61.74,10,123.82],[7,15,152.42,12,111.06],[7,7,119.24,1,101.24],
+  [8,13,151.06,6,153.26],[8,10,155.46,11,112.74],[8,12,128.0,8,140.14],[8,1,133.66,15,149.82],[8,14,148.6,7,72.76],
+  [9,6,96.0,10,119.58],[9,13,130.1,12,82.9],[9,7,172.84,11,143.72],[9,14,116.36,1,153.32],[9,15,98.48,8,109.96],
+  [10,11,114.08,12,144.04],[10,10,99.9,1,106.88],[10,8,102.58,6,110.78],[10,13,132.9,14,93.84],[10,15,97.5,7,116.42],
+  [11,8,126.56,1,126.98],[11,14,145.98,12,129.88],[11,11,139.04,15,115.68],[11,13,100.68,10,109.78],[11,6,166.44,7,154.04],
+  [12,15,133.62,14,87.0],[12,1,100.16,13,100.18],[12,7,135.68,8,123.4],[12,12,119.46,10,138.32],[12,6,133.86,11,102.06],
+  [13,7,120.56,13,139.08],[13,10,84.58,14,126.84],[13,15,142.82,6,153.22],[13,12,123.04,1,95.2],[13,8,143.44,11,128.54],
+  [14,12,185.18,6,98.42],[14,1,91.7,11,73.92],[14,14,110.06,8,136.32],[14,13,93.66,15,186.48],[14,10,140.62,7,116.26],
+  [15,6,97.0,14,141.06],[15,7,120.24,1,127.8],[15,15,164.58,8,170.04],[15,13,123.7,12,114.04],
+  [16,14,143.28,10,142.84],[16,1,159.22,8,143.92],[16,7,135.98,6,130.54],[16,11,123.58,13,113.78],
+  [17,14,104.44,1,125.66],[17,8,116.38,10,106.84],[17,15,95.68,7,112.78],[17,11,192.9,12,165.12]
+];
+
+function renderStandings(bodyId, standings, teams){
+  const el = document.getElementById(bodyId);
+  standings.forEach(row=>{
+    const t = teams[row.id];
+    const winPct = (row.w/(row.w+row.l)*100).toFixed(1);
+    const diff = row.pf-row.pa;
+    const tr = document.createElement('tr');
+    if(row.rank===1) tr.classList.add('champ');
+    tr.innerHTML = `<td><span class="rank">${row.rank===1?'<span class="trophy">&#127942;</span>':row.rank}</span></td>
+      <td><span class="team-name">${t.name}</span><span class="team-mgr">${t.mgr}</span></td>
+      <td class="num wl"><b>${row.w}</b>-<i>${row.l}</i></td><td class="num">${winPct}%</td>
+      <td class="num">${row.pf.toFixed(2)}</td><td class="num">${row.pa.toFixed(2)}</td>
+      <td class="num" style="color:${diff>=0?'var(--win)':'var(--loss)'}">${diff>=0?'+':''}${diff.toFixed(1)}</td>
+      <td class="num"><span class="badge${row.seed===1?' gold':''}">#${row.seed}</span></td>`;
+    el.appendChild(tr);
+  });
+}
+function renderBars(elId, standings, teams, field, cls){
+  const el = document.getElementById(elId);
+  const max = Math.max(...standings.map(r=>r[field]));
+  const sorted = [...standings].sort((a,b)=> field==='pa' ? a[field]-b[field] : b[field]-a[field]);
+  sorted.forEach(row=>{
+    const t = teams[row.id];
+    const pct = (row[field]/max*100).toFixed(1);
+    const div = document.createElement('div'); div.className='bar-row';
+    div.innerHTML = `<div class="lbl">${t.name}</div><div class="bar-track"><div class="bar-fill${cls?' '+cls:''}" style="width:${pct}%"></div></div><div class="bar-val">${row[field].toFixed(1)}</div>`;
+    el.appendChild(div);
+  });
+}
+function renderGames(bodyId, games, teams, year){
+  const el = document.getElementById(bodyId);
+  games.forEach(([wk,aId,aPts,hId,hPts])=>{
+    const a = teams[aId], h = teams[hId];
+    const margin = Math.abs(aPts-hPts).toFixed(2);
+    const aWin = aPts > hPts;
+    const tr = document.createElement('tr');
+    tr.dataset.teams = `${aId},${hId}`;
+    tr.dataset.week = wk;
+    tr.innerHTML = `<td class="num">${wk}</td>
+      <td>${aWin?'<b>':''}${a.name}${aWin?'</b>':''} @ ${!aWin?'<b>':''}${h.name}${!aWin?'</b>':''}</td>
+      <td class="num">${aPts.toFixed(2)} \u2013 ${hPts.toFixed(2)}</td><td class="num">${margin}</td>`;
+    el.appendChild(tr);
+  });
+}
+function renderTeamRecords(elId, year){
+  const el = document.getElementById(elId);
+  const R = RECORDS[year];
+  const bo = R.biggest_blowout;
+  const boWinnerPts = bo.hpts > bo.apts ? bo.hpts : bo.apts;
+  const boLoserPts = bo.hpts > bo.apts ? bo.apts : bo.hpts;
+  const cl = R.closest;
+  const clWinnerPts = cl.hpts > cl.apts ? cl.hpts : cl.apts;
+  const clLoserPts = cl.hpts > cl.apts ? cl.apts : cl.hpts;
+  const items = [
+    {label:"Highest Single-Week Score", val:R.highest_team_week.pts.toFixed(2), who:R.highest_team_week.team, ctx:`${R.highest_team_week.mgr} \u00b7 Week ${R.highest_team_week.week}`},
+    {label:"Lowest Single-Week Score", val:R.lowest_team_week.pts.toFixed(2), who:R.lowest_team_week.team, ctx:`${R.lowest_team_week.mgr} \u00b7 Week ${R.lowest_team_week.week}`},
+    {label:"Biggest Blowout", val:"+"+bo.margin.toFixed(1),
+      who:`${bo.winner} <span class="vs">def.</span> ${bo.loser}`,
+      ctx:`${bo.winmgr} beat ${bo.loser===bo.home?bo.hmgr:bo.amgr} \u00b7 ${boWinnerPts.toFixed(2)}\u2013${boLoserPts.toFixed(2)}, Week ${bo.week}`},
+    {label:"Closest Margin", val:cl.margin.toFixed(2),
+      who:`${cl.winner} <span class="vs">edged</span> ${cl.loser}`,
+      ctx:`${cl.winmgr} beat ${cl.loser===cl.home?cl.hmgr:cl.amgr} \u00b7 ${clWinnerPts.toFixed(2)}\u2013${clLoserPts.toFixed(2)}, Week ${cl.week}`},
+    {label:"Most Points Allowed (Week)", val:R.highest_pa_week.pa.toFixed(2), who:R.highest_pa_week.team, ctx:`${R.highest_pa_week.mgr} allowed this to ${R.highest_pa_week.opp} \u00b7 Week ${R.highest_pa_week.week}`},
+    {label:"Fewest Points Allowed (Week)", val:R.lowest_pa_week.pa.toFixed(2), who:R.lowest_pa_week.team, ctx:`${R.lowest_pa_week.mgr} held ${R.lowest_pa_week.opp} to this \u00b7 Week ${R.lowest_pa_week.week}`}
+  ];
+  items.forEach(it=>{
+    const div = document.createElement('div'); div.className='record';
+    div.innerHTML = `<div class="label">${it.label}</div><div class="value">${it.val}</div><div class="who">${it.who}</div><div class="ctx">${it.ctx}</div>`;
+    el.appendChild(div);
+  });
+}
+function renderTopPerf(elId, year){
+  const el = document.getElementById(elId);
+  el.innerHTML = '';
+  RECORDS[year].top_performances.forEach((p,i)=>{
+    const tr = document.createElement('tr');
+    tr.dataset.team = p.team; tr.dataset.pos = p.pos; tr.dataset.player = p.player.toLowerCase();
+    tr.innerHTML = `<td class="num">${i+1}</td><td><b>${p.player}</b></td><td><span class="pos-badge">${p.pos}</span></td>
+      <td>${p.team}<span class="team-mgr">${p.mgr}</span></td><td class="num">${p.week}</td><td class="num">${p.pts.toFixed(2)}</td>`;
+    el.appendChild(tr);
+  });
+}
+function renderPosTop10(year){
+  const POSES = ["QB","RB","WR","TE","K","D/ST"];
+  const pillsEl = document.getElementById('posPills'+year);
+  const tblEl = document.getElementById('posTop10_'+year);
+  POSES.forEach((pos,i)=>{
+    const pill = document.createElement('div');
+    pill.className = 'pos-pill' + (i===0?' active':'');
+    pill.textContent = pos;
+    pill.dataset.pos = pos;
+    pill.addEventListener('click', ()=>{
+      pillsEl.querySelectorAll('.pos-pill').forEach(p=>p.classList.remove('active'));
+      pill.classList.add('active');
+      fillPosTop10(year, pos);
+    });
+    pillsEl.appendChild(pill);
+  });
+  fillPosTop10(year, POSES[0]);
+}
+function fillPosTop10(year, pos){
+  const tblEl = document.getElementById('posTop10_'+year);
+  tblEl.innerHTML = '';
+  const list = RECORDS[year].top10_by_position[pos] || [];
+  list.forEach((p,i)=>{
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td class="num">${i+1}</td><td><b>${p.player}</b></td><td>${p.team}<span class="team-mgr">${p.mgr}</span></td><td class="num">${p.week}</td><td class="num">${p.pts.toFixed(2)}</td>`;
+    tblEl.appendChild(tr);
+  });
+}
+function renderSeasonLeaders(elId, year){
+  const el = document.getElementById(elId);
+  el.innerHTML = '';
+  RECORDS[year].top_season_scorers.forEach((p,i)=>{
+    const tr = document.createElement('tr');
+    tr.dataset.team = p.team; tr.dataset.pos = p.pos;
+    tr.innerHTML = `<td class="num">${i+1}</td><td><b>${p.player}</b></td><td><span class="pos-badge">${p.pos}</span></td><td>${p.team}<span class="team-mgr">${p.mgr}</span></td><td class="num">${p.pts.toFixed(2)}</td>`;
+    el.appendChild(tr);
+  });
+}
+function renderWorstStarts(elId, year){
+  const el = document.getElementById(elId);
+  RECORDS[year].worst_starts.slice(0,10).forEach(p=>{
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td><b>${p.player}</b> <span class="pos-badge">${p.pos}</span></td><td>${p.team}<span class="team-mgr">${p.mgr}</span></td><td class="num">${p.week}</td><td class="num">${p.pts.toFixed(2)}</td>`;
+    el.appendChild(tr);
+  });
+}
+
+function populateSelect(sel, values){
+  values.forEach(v=>{
+    const opt = document.createElement('option'); opt.value = v; opt.textContent = v;
+    sel.appendChild(opt);
+  });
+}
+
+function setupFilters(year, teamsMap){
+  const teamNames = [...new Set(Object.values(teamsMap).map(t=>t.name))].sort();
+
+  const perfTeam = document.getElementById('perfTeamFilter'+year);
+  const perfPos = document.getElementById('perfPosFilter'+year);
+  const perfSearch = document.getElementById('perfSearchFilter'+year);
+  populateSelect(perfTeam, teamNames);
+  populateSelect(perfPos, ["QB","RB","WR","TE","K","D/ST"]);
+  function applyPerfFilter(){
+    const rows = document.querySelectorAll(`#topPerf${year} tr`);
+    let shown = 0;
+    rows.forEach(tr=>{
+      const okTeam = !perfTeam.value || tr.dataset.team === perfTeam.value;
+      const okPos = !perfPos.value || tr.dataset.pos === perfPos.value;
+      const okSearch = !perfSearch.value || tr.dataset.player.includes(perfSearch.value.toLowerCase());
+      const show = okTeam && okPos && okSearch;
+      tr.classList.toggle('hidden-row', !show);
+      if(show) shown++;
+    });
+    document.getElementById('perfCount'+year).textContent = `Showing ${shown} of ${rows.length}`;
+  }
+  perfTeam.addEventListener('change', applyPerfFilter);
+  perfPos.addEventListener('change', applyPerfFilter);
+  perfSearch.addEventListener('input', applyPerfFilter);
+  applyPerfFilter();
+
+  const szTeam = document.getElementById('szTeamFilter'+year);
+  const szPos = document.getElementById('szPosFilter'+year);
+  populateSelect(szTeam, teamNames);
+  populateSelect(szPos, ["QB","RB","WR","TE","K","D/ST"]);
+  function applySzFilter(){
+    const rows = document.querySelectorAll(`#seasonLeaders${year} tr`);
+    rows.forEach(tr=>{
+      const okTeam = !szTeam.value || tr.dataset.team === szTeam.value;
+      const okPos = !szPos.value || tr.dataset.pos === szPos.value;
+      tr.classList.toggle('hidden-row', !(okTeam && okPos));
+    });
+  }
+  szTeam.addEventListener('change', applySzFilter);
+  szPos.addEventListener('change', applySzFilter);
+
+  const scoreTeam = document.getElementById('scoreTeamFilter'+year);
+  const scoreWeek = document.getElementById('scoreWeekFilter'+year);
+  populateSelect(scoreTeam, teamNames);
+  for(let w=1; w<=17; w++){ const opt=document.createElement('option'); opt.value=w; opt.textContent='Week '+w; scoreWeek.appendChild(opt); }
+  const teamIdByName = {};
+  Object.entries(teamsMap).forEach(([id,t])=>{ teamIdByName[t.name] = id; });
+  function applyScoreFilter(){
+    const rows = document.querySelectorAll(`#scores${year} tr`);
+    let shown = 0;
+    rows.forEach(tr=>{
+      const teamIds = tr.dataset.teams.split(',');
+      const okTeam = !scoreTeam.value || teamIds.includes(teamIdByName[scoreTeam.value]);
+      const okWeek = !scoreWeek.value || tr.dataset.week === scoreWeek.value;
+      const show = okTeam && okWeek;
+      tr.classList.toggle('hidden-row', !show);
+      if(show) shown++;
+    });
+    document.getElementById('scoreCount'+year).textContent = `Showing ${shown} of ${rows.length}`;
+  }
+  scoreTeam.addEventListener('change', applyScoreFilter);
+  scoreWeek.addEventListener('change', applyScoreFilter);
+  applyScoreFilter();
+}
+
+window.clearFilters = function(year, group){
+  if(group==='perf'){
+    document.getElementById('perfTeamFilter'+year).value='';
+    document.getElementById('perfPosFilter'+year).value='';
+    document.getElementById('perfSearchFilter'+year).value='';
+    document.getElementById('perfTeamFilter'+year).dispatchEvent(new Event('change'));
+  } else if(group==='sz'){
+    document.getElementById('szTeamFilter'+year).value='';
+    document.getElementById('szPosFilter'+year).value='';
+    document.getElementById('szTeamFilter'+year).dispatchEvent(new Event('change'));
+  } else if(group==='score'){
+    document.getElementById('scoreTeamFilter'+year).value='';
+    document.getElementById('scoreWeekFilter'+year).value='';
+    document.getElementById('scoreTeamFilter'+year).dispatchEvent(new Event('change'));
+  }
+};
+
+renderStandings('standings2025', standings2025, teams2025);
+renderBars('pointsBars2025', standings2025, teams2025, 'pf');
+renderBars('paBars2025', standings2025, teams2025, 'pa', 'pa');
+renderGames('scores2025', games2025, teams2025, '2025');
+renderTeamRecords('teamRecords2025','2025');
+renderTopPerf('topPerf2025','2025');
+renderPosTop10('2025');
+renderSeasonLeaders('seasonLeaders2025','2025');
+renderWorstStarts('worstStarts2025','2025');
+setupFilters('2025', teams2025);
+
+renderStandings('standings2024', standings2024, teams2024);
+renderBars('pointsBars2024', standings2024, teams2024, 'pf');
+renderBars('paBars2024', standings2024, teams2024, 'pa', 'pa');
+renderGames('scores2024', games2024, teams2024, '2024');
+renderTeamRecords('teamRecords2024','2024');
+renderTopPerf('topPerf2024','2024');
+renderPosTop10('2024');
+renderSeasonLeaders('seasonLeaders2024','2024');
+renderWorstStarts('worstStarts2024','2024');
+setupFilters('2024', teams2024);
+
+// ===== ALL-TIME TAB =====
+let allTimeStandingsData = [];
+function buildAllTime(){
+  // Each team-season kept as its own row (no merging by manager)
+  function toRows(standings, teamsMap, year){
+    return standings.map(row=>{
+      const t = teamsMap[row.id];
+      return {team:t.name, mgr:t.mgr, year, w:row.w, l:row.l, pf:row.pf, pa:row.pa, winPct: row.w/(row.w+row.l)*100};
+    });
+  }
+  allTimeStandingsData = [...toRows(standings2025, teams2025, '2025'), ...toRows(standings2024, teams2024, '2024')]
+    .sort((a,b)=> b.winPct - a.winPct || b.w - a.w);
+
+  renderAllTimeStandings();
+
+  const mgrSel = document.getElementById('allTimeMgrFilter');
+  const mgrNames = [...new Set(allTimeStandingsData.map(r=>r.mgr))].sort();
+  mgrNames.forEach(m=>{ const opt=document.createElement('option'); opt.value=m; opt.textContent=m; mgrSel.appendChild(opt); });
+  mgrSel.addEventListener('change', renderAllTimeStandings);
+  document.getElementById('allTimeYearFilter').addEventListener('change', renderAllTimeStandings);
+
+  // All-time top 10 individual performances
+  buildAllTimeRest();
+}
+
+function renderAllTimeStandings(){
+  const mgrVal = document.getElementById('allTimeMgrFilter').value;
+  const yearVal = document.getElementById('allTimeYearFilter').value;
+  const filtered = allTimeStandingsData.filter(r =>
+    (!mgrVal || r.mgr === mgrVal) && (!yearVal || r.year === yearVal)
+  );
+  const el = document.getElementById('allTimeStandings');
+  el.innerHTML = '';
+  filtered.forEach((r,i)=>{
+    const tr = document.createElement('tr');
+    if(i===0 && !mgrVal && !yearVal) tr.classList.add('champ');
+    tr.innerHTML = `<td><span class="rank">${(i===0 && !mgrVal && !yearVal)?'<span class="trophy">&#127942;</span>':i+1}</span></td>
+      <td class="team-name">${r.team}</td><td style="color:var(--hash);font-size:12px">${r.mgr}</td>
+      <td class="num"><span class="badge year">${r.year}</span></td>
+      <td class="num wl"><b>${r.w}</b>-<i>${r.l}</i></td>
+      <td class="num">${r.winPct.toFixed(1)}%</td><td class="num">${r.pf.toFixed(1)}</td><td class="num">${r.pa.toFixed(1)}</td>`;
+    el.appendChild(tr);
+  });
+  document.getElementById('allTimeStandingsCount').textContent = `Showing ${filtered.length} of ${allTimeStandingsData.length} team-seasons`;
+}
+window.clearAllTimeStandingsFilter = function(){
+  document.getElementById('allTimeMgrFilter').value = '';
+  document.getElementById('allTimeYearFilter').value = '';
+  renderAllTimeStandings();
+};
+
+function buildAllTimeRest(){
+  const combinedPerf = [...RECORDS['2025'].top_performances, ...RECORDS['2024'].top_performances]
+    .sort((a,b)=>b.pts-a.pts).slice(0,10);
+  const perfEl = document.getElementById('allTimeTopPerf');
+  combinedPerf.forEach((p,i)=>{
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td class="num">${i+1}</td><td><b>${p.player}</b></td><td><span class="pos-badge">${p.pos}</span></td>
+      <td>${p.mgr}<span class="team-mgr">${p.team}</span></td><td class="num"><span class="badge year">${p.year}</span></td>
+      <td class="num">${p.week}</td><td class="num">${p.pts.toFixed(2)}</td>`;
+    perfEl.appendChild(tr);
+  });
+
+  // All-time top 10 by position (pills)
+  const POSES = ["QB","RB","WR","TE","K","D/ST"];
+  const pillsEl = document.getElementById('allTimePosPills');
+  function fillAllTimePos(pos){
+    const tblEl = document.getElementById('allTimePosTop10');
+    tblEl.innerHTML = '';
+    const combined = [...(RECORDS['2025'].top10_by_position[pos]||[]), ...(RECORDS['2024'].top10_by_position[pos]||[])]
+      .sort((a,b)=>b.pts-a.pts).slice(0,10);
+    combined.forEach((p,i)=>{
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td class="num">${i+1}</td><td><b>${p.player}</b></td><td>${p.mgr}<span class="team-mgr">${p.team}</span></td>
+        <td class="num"><span class="badge year">${p.year}</span></td><td class="num">${p.week}</td><td class="num">${p.pts.toFixed(2)}</td>`;
+      tblEl.appendChild(tr);
+    });
+  }
+  POSES.forEach((pos,i)=>{
+    const pill = document.createElement('div');
+    pill.className = 'pos-pill' + (i===0?' active':'');
+    pill.textContent = pos;
+    pill.addEventListener('click', ()=>{
+      pillsEl.querySelectorAll('.pos-pill').forEach(p=>p.classList.remove('active'));
+      pill.classList.add('active');
+      fillAllTimePos(pos);
+    });
+    pillsEl.appendChild(pill);
+  });
+  fillAllTimePos(POSES[0]);
+
+  // All-time career point leaders (sum season totals across years by player name)
+  const career = {};
+  ['2025','2024'].forEach(year=>{
+    RECORDS[year].top_season_scorers.forEach(p=>{
+      if(!career[p.player]) career[p.player] = {player:p.player, pts:0, mgrs:new Set()};
+      career[p.player].pts += p.pts;
+      career[p.player].mgrs.add(p.mgr);
+    });
+  });
+  const careerList = Object.values(career).sort((a,b)=>b.pts-a.pts).slice(0,10);
+  const careerEl = document.getElementById('allTimeCareerLeaders');
+  careerList.forEach((p,i)=>{
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td class="num">${i+1}</td><td><b>${p.player}</b></td><td style="color:var(--hash);font-size:12px">${[...p.mgrs].join(', ')}</td><td class="num">${p.pts.toFixed(2)}</td>`;
+    careerEl.appendChild(tr);
+  });
+}
+buildAllTime();
+
+
+document.querySelectorAll('.season-tab').forEach(st=>{
+  st.addEventListener('click', ()=>{
+    document.querySelectorAll('.season-tab').forEach(x=>x.classList.remove('active'));
+    document.querySelectorAll('.season-block').forEach(x=>x.classList.remove('active'));
+    st.classList.add('active');
+    document.getElementById(st.dataset.season).classList.add('active');
+    document.getElementById('mainTabs').style.display = (st.dataset.season==='salltime') ? 'none' : 'flex';
+  });
+});
+document.querySelectorAll('.tab').forEach(tab=>{
+  tab.addEventListener('click', ()=>{
+    document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+    tab.classList.add('active');
+    document.querySelectorAll('.season-block').forEach(block=>{
+      block.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+      const match = block.querySelector(`.panel[data-panel="${tab.dataset.tab}"]`);
+      if(match) match.classList.add('active');
+    });
+  });
+});
+</script>
+</body>
+</html>
